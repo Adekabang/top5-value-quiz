@@ -44,14 +44,17 @@
 	let showResumePrompt = false;
 
 	// Type guards remain the same...
-	function isPhase1(phase: string): phase is 'phase1' {
+	function isPhase1(phase: QuizPhase): phase is 'phase1' {
 		return phase === 'phase1';
 	}
-	function isPhase2(phase: string): phase is 'phase2' {
+	function isPhase2(phase: QuizPhase): phase is 'phase2' {
 		return phase === 'phase2';
 	}
-	function isEvaluating(phase: string): phase is 'evaluating' {
+	function isEvaluating(phase: QuizPhase): phase is 'evaluating' {
 		return phase === 'evaluating';
+	}
+	function isPhase(phase: QuizPhase, currentPhase: QuizPhase): boolean {
+		return currentPhase === phase;
 	}
 
 	// onMount, resumeQuiz, startNewQuiz, startQuiz, setCurrentQuestion remain the same...
@@ -65,20 +68,20 @@
 			if (browser && localStorage.getItem('valueScores') && $currentQuestionIndex > 0) {
 				// If results exist (evaluation+review done), go to results
 				// Check quizPhase store directly as evaluatedTop5/reviewText aren't persisted
-				if ($quizPhase === 'results') {
+				if (isPhase('results', $quizPhase)) {
 					// Already done, stay in results (or potentially re-evaluate if desired)
 					// For simplicity, we assume results phase means done.
 				}
 				// If evaluation done but review pending/failed
-				else if ($quizPhase === 'evaluating') {
+				else if (isPhase('evaluating', $quizPhase)) {
 					// Let determinePhaseAndQuestion handle triggering the right step
 					determinePhaseAndQuestion();
 				}
 				// If mid-quiz
 				else if (
 					$currentQuestionIndex <= TOTAL_QUESTIONS &&
-					$quizPhase !== 'results' &&
-					$quizPhase !== 'evaluating'
+					!isPhase('results', $quizPhase) &&
+					!isPhase('evaluating', $quizPhase)
 				) {
 					showResumePrompt = true;
 				}
