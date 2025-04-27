@@ -47,7 +47,7 @@
 		{#if question.type === 'simple_choice'}
 			<div class="flex flex-col space-y-3">
 				{#each question.options as option (option.text)}
-					<button class="btn btn-outline" on:click={() => handleSimpleChoice(option)}>
+					<button class="btn btn-primary py-10" on:click={() => handleSimpleChoice(option)}>
 						{option.text}
 					</button>
 				{/each}
