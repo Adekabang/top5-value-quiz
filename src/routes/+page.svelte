@@ -24,7 +24,8 @@
 		ValueScores,
 		Phase1Option,
 		Phase2Option,
-		QuizQuestion
+		QuizQuestion,
+		QuizPhase
 	} from '$lib/types';
 	import QuestionCard from '$lib/components/QuestionCard.svelte';
 	import ProgressBar from '$lib/components/ProgressBar.svelte';
@@ -246,41 +247,39 @@
 		determinePhaseAndQuestion($quizPhase, $currentQuestionIndex);
 	}
 
-	function determinePhaseAndQuestion(phase = $quizPhase, index = $currentQuestionIndex) {
+	function determinePhaseAndQuestion(phase: QuizPhase = $quizPhase, index = $currentQuestionIndex) {
 		// Reset error/retry state when determining question (unless loading is in progress)
 		if (!isLoading) {
 			errorMessage.set(null);
 			retryPossible.set(false);
 		}
 
-		if (phase === 'start' || phase === 'results' || phase === 'error') {
-			// Keep error phase for critical errors
+		const validPhases = ['start', 'phase1', 'phase2', 'results', 'loading', 'error'] as const;
+		const currentPhase = validPhases.includes(phase as any) ? phase : 'start';
+
+		// Handle special phases first
+		if (['start', 'results', 'error'].includes(currentPhase)) {
 			currentQuestion = null;
 			return;
 		}
 
 		if (index > 0 && index <= TOTAL_PHASE_1_QUESTIONS) {
-			if (phase !== 'phase1') quizPhase.set('phase1'); // Correct phase if needed
+			if (currentPhase !== 'phase1') quizPhase.set('phase1');
 			if (phase1Questions.length > 0) {
 				currentQuestion = phase1Questions[index - 1];
-			} else {
-				// Questions not loaded yet, wait for onMount
 			}
 		} else if (index > TOTAL_PHASE_1_QUESTIONS && index <= TOTAL_QUESTIONS) {
-			if (phase !== 'phase2') quizPhase.set('phase2'); // Correct phase if needed
-			// Fetch question only if not already loaded for this index and not currently loading
+			if (currentPhase !== 'phase2') quizPhase.set('phase2');
 			if (!$currentPhase2Question && !isLoading) {
-				fetchNextPhase2Question(); // Fetch is triggered here based on state
+				fetchNextPhase2Question();
 			} else if ($currentPhase2Question) {
-				// If question is already loaded (e.g., after successful fetch or resume), display it
 				currentQuestion = $currentPhase2Question;
 			}
 		} else if (index > TOTAL_QUESTIONS) {
-			if (phase !== 'results') quizPhase.set('results');
+			if (currentPhase !== 'results') quizPhase.set('results');
 			currentQuestion = null;
 		} else {
-			// Default to start if index is 0 or invalid
-			if (phase !== 'start') quizPhase.set('start');
+			if (currentPhase !== 'start') quizPhase.set('start');
 			currentQuestion = null;
 		}
 	}
