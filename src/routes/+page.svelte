@@ -35,27 +35,32 @@
 	let isLoading = false;
 	let showResumePrompt = false;
 
-	// onMount and other setup functions remain the same...
+	// Load Phase 1 questions on mount
 	onMount(async () => {
 		try {
 			const response = await fetch('/phase1_questions.json');
 			if (!response.ok) throw new Error('Failed to load Phase 1 questions');
 			phase1Questions = await response.json();
 
+			// Check if there's progress in localStorage
 			if (
 				browser &&
 				localStorage.getItem('valueScores') &&
 				$currentQuestionIndex > 0 &&
 				$currentQuestionIndex < TOTAL_QUESTIONS
 			) {
+				// Don't automatically resume, ask the user
 				showResumePrompt = true;
 			} else if ($currentQuestionIndex === 0) {
-				clearLocalStorage();
+				// If index is 0, ensure state is fully reset
+				clearLocalStorage(); // Clear any potentially inconsistent state
 				quizPhase.set('start');
 			} else {
+				// If already finished or beyond expected range, reset
 				if ($currentQuestionIndex >= TOTAL_QUESTIONS) {
 					quizPhase.set('results');
 				} else {
+					// Determine phase based on index if not starting/finished
 					determinePhaseAndQuestion();
 				}
 			}
@@ -69,22 +74,23 @@
 
 	function resumeQuiz() {
 		showResumePrompt = false;
-		determinePhaseAndQuestion();
+		determinePhaseAndQuestion(); // Load the correct question based on stored index
 	}
 
 	function startNewQuiz() {
 		showResumePrompt = false;
-		resetQuiz();
+		resetQuiz(); // Fully resets stores and localStorage
 		quizPhase.set('start');
 	}
 
 	function startQuiz() {
-		resetQuiz();
+		resetQuiz(); // Ensure clean start
 		quizPhase.set('phase1');
-		currentQuestionIndex.set(1);
+		currentQuestionIndex.set(1); // Start at question 1
 		setCurrentQuestion();
 	}
 
+	// Determine current question based on index
 	function setCurrentQuestion() {
 		const index = $currentQuestionIndex;
 		if ($quizPhase === 'phase1' && index > 0 && index <= TOTAL_PHASE_1_QUESTIONS) {
@@ -92,20 +98,21 @@
 		} else if ($quizPhase === 'phase2' && $currentPhase2Question) {
 			currentQuestion = $currentPhase2Question;
 		} else {
-			currentQuestion = null;
+			currentQuestion = null; // Should not happen in normal flow
 		}
 	}
 
-	// --- Updated fetchNextPhase2Question ---
+	// Fetch the next Phase 2 question from the backend
 	async function fetchNextPhase2Question() {
-		if ($quizPhase !== 'phase2') return;
+		if ($quizPhase !== 'phase2') return; // Should only be called in Phase 2
 
 		isLoading = true;
 		errorMessage.set(null);
 		retryPossible.set(false); // Reset retry state before attempting fetch
-		currentPhase2Question.set(null); // Clear previous question while loading
+		// Keep currentPhase2Question null while loading
+		// currentPhase2Question.set(null); // Already set to null by handleAnswer or determinePhase
 
-		const remaining = TOTAL_QUESTIONS - $currentQuestionIndex + 1;
+		const remaining = TOTAL_QUESTIONS - $currentQuestionIndex + 1; // Correct calculation
 
 		try {
 			const response = await fetch('/api/generate-question', {
@@ -157,7 +164,7 @@
 		}
 	}
 
-	// --- NEW: Function to handle retry ---
+	// Function to handle retry
 	function retryFetchQuestion() {
 		console.log('Retrying fetchNextPhase2Question...');
 		// No need to reset state here, just call the fetch function again
@@ -168,61 +175,83 @@
 	function handleAnswer(selectedOption: Phase1Option | Phase2Option | Phase2Option[]) {
 		if (!currentQuestion || isLoading || $retryPossible) return; // Prevent answering while loading or if an error needs retry
 
-		// --- Apply Scoring Logic (remains the same) ---
+		// --- Apply Scoring Logic ---
 		let updatedScores = { ...$valueScores };
-		// ... (scoring logic as before) ...
+
 		if (currentQuestion.type === 'simple_choice' && 'value_area_hint' in selectedOption) {
+			// Phase 1 Scoring
 			(selectedOption as Phase1Option).value_area_hint.forEach((value) => {
 				if (updatedScores.hasOwnProperty(value)) {
 					updatedScores[value]++;
 				}
 			});
 		} else if (currentQuestion.type === 'forced_choice' && 'text' in selectedOption) {
+			// Phase 2 Forced Choice Scoring
 			const chosenValueText = (selectedOption as Phase2Option).text;
 			const comparedValues = (currentQuestion as Phase2Question).values_being_compared;
-			const chosenValue = comparedValues.find((v) => chosenValueText.includes(v));
+			const chosenValue = comparedValues.find((v) => chosenValueText.includes(v)); // Simple check
 			const otherValue = comparedValues.find((v) => v !== chosenValue);
-			if (chosenValue && updatedScores.hasOwnProperty(chosenValue)) updatedScores[chosenValue] += 2;
-			if (otherValue && updatedScores.hasOwnProperty(otherValue)) updatedScores[otherValue] -= 1;
+
+			if (chosenValue && updatedScores.hasOwnProperty(chosenValue)) {
+				updatedScores[chosenValue] += 2;
+			}
+			if (otherValue && updatedScores.hasOwnProperty(otherValue)) {
+				updatedScores[otherValue] -= 1; // Penalty for not chosen
+			}
 		} else if (currentQuestion.type === 'ranking' && Array.isArray(selectedOption)) {
+			// Phase 2 Ranking Scoring
 			const rankedOptions = selectedOption as Phase2Option[];
 			const comparedValues = (currentQuestion as Phase2Question).values_being_compared;
+
 			rankedOptions.forEach((option, index) => {
-				const rank = index + 1;
-				const points = Math.max(0, 4 - rank);
-				const value = comparedValues.find((v) => option.text.includes(v));
-				if (value && updatedScores.hasOwnProperty(value)) updatedScores[value] += points;
+				const rank = index + 1; // 1-based rank
+				const points = Math.max(0, 4 - rank); // Rank 1: +3, Rank 2: +2, Rank 3: +1, Rank 4: 0
+				const value = comparedValues.find((v) => option.text.includes(v)); // Simple check
+				if (value && updatedScores.hasOwnProperty(value)) {
+					updatedScores[value] += points;
+				}
 			});
 		}
-		valueScores.set(updatedScores);
+
+		valueScores.set(updatedScores); // Update the store
 
 		// --- Advance Quiz ---
 		const nextIndex = $currentQuestionIndex + 1;
 
 		if (nextIndex <= TOTAL_PHASE_1_QUESTIONS) {
+			// Still in Phase 1
 			currentQuestionIndex.set(nextIndex);
 			quizPhase.set('phase1');
 			setCurrentQuestion();
 		} else if (nextIndex <= TOTAL_QUESTIONS) {
+			// Entering or continuing Phase 2
 			currentQuestionIndex.set(nextIndex);
 			quizPhase.set('phase2');
-			fetchNextPhase2Question(); // Fetch the next AI question
+			// *** REMOVED fetchNextPhase2Question() call from here ***
+			// *** INSTEAD: Signal that the next question is needed by clearing the current one ***
+			// This allows the reactive statement below to trigger the fetch exactly once.
+			currentPhase2Question.set(null);
 		} else {
+			// Quiz finished
 			quizPhase.set('results');
-			currentQuestionIndex.set(nextIndex);
+			currentQuestionIndex.set(nextIndex); // Mark as completed
 			currentQuestion = null;
+			currentPhase2Question.set(null); // Clear question state
 		}
 	}
 
-	// Reactive statement to determine phase and load question
+	// Reactive statement to determine phase and load question if phase/index changes
 	$: if (browser && !showResumePrompt) {
+		// Only run in browser and when not showing resume prompt
 		determinePhaseAndQuestion($quizPhase, $currentQuestionIndex);
 	}
 
 	function determinePhaseAndQuestion(phase = $quizPhase, index = $currentQuestionIndex) {
-		// Reset error/retry state when determining question
-		errorMessage.set(null);
-		retryPossible.set(false);
+		// Reset error/retry state when determining question (unless loading is in progress)
+		if (!isLoading) {
+			errorMessage.set(null);
+			retryPossible.set(false);
+		}
 
 		if (phase === 'start' || phase === 'results' || phase === 'error') {
 			// Keep error phase for critical errors
@@ -231,23 +260,26 @@
 		}
 
 		if (index > 0 && index <= TOTAL_PHASE_1_QUESTIONS) {
-			if (phase !== 'phase1') quizPhase.set('phase1');
+			if (phase !== 'phase1') quizPhase.set('phase1'); // Correct phase if needed
 			if (phase1Questions.length > 0) {
 				currentQuestion = phase1Questions[index - 1];
+			} else {
+				// Questions not loaded yet, wait for onMount
 			}
 		} else if (index > TOTAL_PHASE_1_QUESTIONS && index <= TOTAL_QUESTIONS) {
-			if (phase !== 'phase2') quizPhase.set('phase2');
-			// Fetch question only if not already loaded for this index
-			// Check currentPhase2Question validity more carefully if needed
-			if (!$currentPhase2Question) {
-				fetchNextPhase2Question();
-			} else {
+			if (phase !== 'phase2') quizPhase.set('phase2'); // Correct phase if needed
+			// Fetch question only if not already loaded for this index and not currently loading
+			if (!$currentPhase2Question && !isLoading) {
+				fetchNextPhase2Question(); // Fetch is triggered here based on state
+			} else if ($currentPhase2Question) {
+				// If question is already loaded (e.g., after successful fetch or resume), display it
 				currentQuestion = $currentPhase2Question;
 			}
 		} else if (index > TOTAL_QUESTIONS) {
 			if (phase !== 'results') quizPhase.set('results');
 			currentQuestion = null;
 		} else {
+			// Default to start if index is 0 or invalid
 			if (phase !== 'start') quizPhase.set('start');
 			currentQuestion = null;
 		}
@@ -264,7 +296,7 @@
 
 <main class="container mx-auto flex min-h-screen flex-col items-center justify-center p-4">
 	{#if showResumePrompt}
-		<!-- Resume Prompt Card (remains the same) -->
+		<!-- Resume Prompt Card -->
 		<div class="card bg-base-100 mx-auto w-full max-w-md shadow-xl">
 			<div class="card-body items-center text-center">
 				<h2 class="card-title">Resume Quiz?</h2>
@@ -278,7 +310,7 @@
 			</div>
 		</div>
 	{:else if $quizPhase === 'start'}
-		<!-- Start Screen Card (remains the same) -->
+		<!-- Start Screen Card -->
 		<div class="card bg-base-100 w-full max-w-md shadow-xl">
 			<div class="card-body items-center text-center">
 				<h1 class="card-title mb-4 text-3xl">Find Your Top 5 Professional Values</h1>
@@ -340,7 +372,7 @@
 			<QuestionCard question={currentQuestion} onAnswer={handleAnswer} />
 		{/if}
 	{:else if $quizPhase === 'results'}
-		<!-- Results Display (remains the same) -->
+		<!-- Results Display -->
 		<ResultsDisplay finalScores={$valueScores} />
 	{:else if $quizPhase === 'error' && !isLoading}
 		<!-- General Error Display (for critical non-retryable errors like initial load) -->
