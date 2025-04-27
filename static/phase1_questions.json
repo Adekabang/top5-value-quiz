@@ -2,74 +2,74 @@
 	{
 		"id": 1,
 		"type": "simple_choice",
-		"text": "When starting a major project at work, what is your first priority?",
+		"text": "When starting a major project, what's your initial focus?",
 		"options": [
 			{
-				"text": "Defining clear goals and a step-by-step plan.",
-				"value_area_hint": ["Achievement", "Control", "Conscientious"]
+				"text": "Developing a detailed plan and logical structure, ensuring you have the necessary influence.",
+				"value_area_hint": ["Control", "Reason", "Power"]
 			},
 			{
-				"text": "Gathering the right team and ensuring good communication.",
-				"value_area_hint": ["Community", "Communication", "Harmony"]
+				"text": "Building team rapport and ensuring mutual understanding and collaboration.",
+				"value_area_hint": ["Community", "Respect", "Harmony"]
 			}
 		]
 	},
 	{
 		"id": 2,
 		"type": "simple_choice",
-		"text": "What is a key factor in your daily work satisfaction?",
+		"text": "What's more crucial for your daily work satisfaction?",
 		"options": [
 			{
-				"text": "Completing tasks accurately and to a high standard.",
-				"value_area_hint": ["Quality", "Conscientious"]
+				"text": "Ensuring your work meets high standards and aligns with ethical principles.",
+				"value_area_hint": ["Quality", "Integrity", "Conscientious"]
 			},
 			{
-				"text": "Having the flexibility to manage your own time and tasks.",
-				"value_area_hint": ["Freedom", "Flexibility"]
+				"text": "Having autonomy, adaptability in how you work, and finding enjoyment in it.",
+				"value_area_hint": ["Freedom", "Flexibility", "Joy"]
 			}
 		]
 	},
 	{
 		"id": 3,
 		"type": "simple_choice",
-		"text": "When facing a challenging professional obstacle, what approach do you lean towards?",
+		"text": "When facing a complex professional challenge, you lean towards:",
 		"options": [
 			{
-				"text": "Finding an innovative and creative solution.",
-				"value_area_hint": ["Creativity", "Possibility"]
+				"text": "Exploring novel ideas, potential breakthroughs, and maintaining optimism.",
+				"value_area_hint": ["Creativity", "Possibility", "Hope"]
 			},
 			{
-				"text": "Systematically analyzing the problem to find a logical solution.",
-				"value_area_hint": ["Reason", "Intelligence"]
+				"text": "Applying intellectual rigor, deep curiosity, and understanding the underlying feelings involved.",
+				"value_area_hint": ["Intelligence", "Wonder", "Emotion"]
 			}
 		]
 	},
 	{
 		"id": 4,
 		"type": "simple_choice",
-		"text": "In dealing with colleagues, what do you find most important?",
+		"text": "In your interactions with colleagues, you prioritize:",
 		"options": [
 			{
-				"text": "Being open and truthful in all interactions.",
-				"value_area_hint": ["Honesty", "Transparency", "Integrity"]
+				"text": "Being direct, open, and truthful, handled with consideration.",
+				"value_area_hint": ["Honesty", "Transparency", "Grace"]
 			},
 			{
-				"text": "Showing understanding and support for their challenges.",
-				"value_area_hint": ["Compassion", "Respect"]
+				"text": "Showing empathy, considering the human element and personal connections.",
+				"value_area_hint": ["Compassion", "Humanity", "Family"]
 			}
 		]
 	},
 	{
 		"id": 5,
 		"type": "simple_choice",
-		"text": "What motivates you to take on new professional challenges?",
+		"text": "What primarily motivates you to take on new professional challenges?",
 		"options": [
 			{
-				"text": "The opportunity for personal and professional Growth.",
-				"value_area_hint": ["Growth", "Achievement"]
+				"text": "The opportunity to learn, pursue your interests, and accomplish goals.",
+				"value_area_hint": ["Growth", "Passion", "Achievement"]
 			},
 			{
-				"text": "The potential for Recognition and reward.",
+				"text": "The potential for external validation and financial gain.",
 				"value_area_hint": ["Recognition", "Wealth"]
 			}
 		]
@@ -77,14 +77,14 @@
 	{
 		"id": 6,
 		"type": "simple_choice",
-		"text": "In a fast-paced work environment, what is most essential?",
+		"text": "In a demanding work environment, what's most essential for you?",
 		"options": [
 			{
-				"text": "Maintaining a sense of Balance and avoiding burnout.",
-				"value_area_hint": ["Balance"]
+				"text": "Maintaining equilibrium, personal contentment, and physical well-being.",
+				"value_area_hint": ["Balance", "Happiness", "Fitness"]
 			},
 			{
-				"text": "Having the Resilience to bounce back from setbacks.",
+				"text": "Showing courage and dedication through difficulties.",
 				"value_area_hint": ["Bravery", "Commitment"]
 			}
 		]
@@ -95,57 +95,57 @@
 		"text": "What kind of professional relationships do you value most?",
 		"options": [
 			{
-				"text": "Those based on mutual Loyalty and dependability.",
+				"text": "Those built on mutual dependability and reliability.",
 				"value_area_hint": ["Loyalty", "Trust"]
 			},
 			{
-				"text": "Those that provide a sense of camaraderie and Fun.",
-				"value_area_hint": ["Fun", "Friendship"]
+				"text": "Those that provide a sense of camaraderie and lightheartedness.",
+				"value_area_hint": ["Friendship", "Fun"]
 			}
 		]
 	},
 	{
 		"id": 8,
 		"type": "simple_choice",
-		"text": "When leading a project or team, what do you focus on?",
+		"text": "When leading a team or project, your focus is on:",
 		"options": [
 			{
-				"text": "Inspiring and motivating others towards a shared vision.",
+				"text": "Motivating others towards a compelling shared vision.",
 				"value_area_hint": ["Inspiration", "Leadership"]
 			},
 			{
-				"text": "Ensuring the project is completed successfully and responsibly.",
-				"value_area_hint": ["Responsibility", "Achievement"]
+				"text": "Ensuring tasks are done effectively and taking decisive initiative.",
+				"value_area_hint": ["Responsibility", "Action"]
 			}
 		]
 	},
 	{
 		"id": 9,
 		"type": "simple_choice",
-		"text": "What is your perspective on handling risk in your career?",
+		"text": "What's your general approach towards professional risk?",
 		"options": [
 			{
-				"text": "Preferring Security and avoiding unnecessary risks.",
-				"value_area_hint": ["Security"]
+				"text": "Prioritizing safety and a predictable path, trusting the process.",
+				"value_area_hint": ["Security", "Faith"]
 			},
 			{
-				"text": "Being willing to take calculated risks for potential reward.",
-				"value_area_hint": ["Action", "Possibility"]
+				"text": "Embracing new opportunities with energy and appropriate self-awareness.",
+				"value_area_hint": ["Enthusiasm", "Confidence", "Humility"]
 			}
 		]
 	},
 	{
 		"id": 10,
 		"type": "simple_choice",
-		"text": "What gives you a sense of deeper meaning in your work?",
+		"text": "What gives you a deeper sense of meaning in your work?",
 		"options": [
 			{
-				"text": "Contributing to something larger than yourself.",
-				"value_area_hint": ["Humanity"]
+				"text": "Contributing to justice and ensuring equal opportunities for others.",
+				"value_area_hint": ["Fairness", "Equality"]
 			},
 			{
-				"text": "Exploring the underlying principles and ideas.",
-				"value_area_hint": ["Spirituality", "Reason"]
+				"text": "Aligning your work with your core beliefs and personal code.",
+				"value_area_hint": ["Spirituality", "Values"]
 			}
 		]
 	}
