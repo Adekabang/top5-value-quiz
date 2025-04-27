@@ -116,7 +116,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	const { scores, remainingQuestions } = requestData;
 
 	// --- *** NEW: Analyze Scores to Determine Desired Question Type *** ---
-	let desiredType: 'ranking' | 'forced_choice' | 'auto' = 'auto'; // Default: let AI decide
+	let desiredType: 'ranking' | 'forced_choice' = 'forced_choice'; // Default to forced_choice instead of 'auto'
 
 	try {
 		const sortedScores = Object.entries(scores)
@@ -141,15 +141,15 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 		}
 
-		// Add randomness: ~20% chance to let AI decide even if heuristic suggests ranking
+		// Add randomness: ~20% chance to use forced_choice even if heuristic suggests ranking
 		if (desiredType === 'ranking' && Math.random() < 0.2) {
-			console.log("Score analysis: Randomly overriding ranking request to 'auto'.");
-			desiredType = 'auto';
+			console.log("Score analysis: Randomly overriding ranking request to 'forced_choice'.");
+			desiredType = 'forced_choice';
 		}
 	} catch (analysisError) {
 		console.error('Error during score analysis:', analysisError);
-		// Default to 'auto' if analysis fails
-		desiredType = 'auto';
+		// Default to forced_choice if analysis fails
+		desiredType = 'forced_choice';
 	}
 	// --- *** End of Score Analysis Logic *** ---
 
@@ -164,12 +164,9 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (desiredType === 'ranking') {
 		userPrompt += " The question 'type' MUST be 'ranking'.";
 		console.log('Instructing AI to generate RANKING question.');
-	} else if (desiredType === 'forced_choice') {
-		// Example if you wanted to force forced_choice sometimes
+	} else {
 		userPrompt += " The question 'type' MUST be 'forced_choice'.";
 		console.log('Instructing AI to generate FORCED_CHOICE question.');
-	} else {
-		console.log("Letting AI choose question type ('auto').");
 	}
 
 	const messages = [
