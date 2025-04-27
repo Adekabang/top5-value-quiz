@@ -1,61 +1,110 @@
 import { json, error as svelteKitError } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { OPENROUTER_API_KEY, OPENROUTER_MODEL } from '$env/static/private'; // Securely import API key
+// Import both API Key and Model Name from environment variables
+import { OPENROUTER_API_KEY, OPENROUTER_MODEL } from '$env/static/private';
 import type { GenerateQuestionRequest, GenerateQuestionResponse, ValueScores } from '$lib/types';
-import { PROFESSIONAL_VALUES } from '$lib/constants'; // Import the list for the prompt
+import { PROFESSIONAL_VALUES } from '$lib/constants';
 
 const OPENROUTER_API_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
-// Define the model you want to use via OpenRouter (e.g., Claude, GPT, Gemini)
-// Check OpenRouter docs for available models: https://openrouter.ai/docs#models
-const AI_MODEL = OPENROUTER_MODEL; // Example: Use Gemini Pro
+// Use the model specified in the environment variable - MUST support json_schema
+const AI_MODEL = OPENROUTER_MODEL || 'anthropic/claude-3-haiku-20240307'; // Default to a known compatible model
 
-// --- Initial System Prompt ---
-// (Keep this outside the handler to avoid redefining it on every request)
-const SYSTEM_PROMPT = `You are an AI assistant designed to help a user identify their top 5 professional values from a predefined list of 52 values.
+// --- Define the JSON Schema for the expected response ---
+const quizQuestionSchema = {
+	name: 'generateQuizQuestion', // Function/tool name for the model
+	strict: true, // Enforce schema strictly
+	schema: {
+		type: 'object',
+		properties: {
+			id: {
+				type: 'string',
+				description:
+					'A unique identifier string for this specific question (e.g., timestamp, random string).'
+			},
+			type: {
+				type: 'string',
+				enum: ['forced_choice', 'ranking'], // Enforce specific values
+				description:
+					"The type of question: 'forced_choice' (compare 2 values) or 'ranking' (rank 3-4 values)."
+			},
+			text: {
+				type: 'string',
+				description:
+					'The question text to be presented to the user, framed in a professional context or scenario.'
+			},
+			options: {
+				type: 'array',
+				minItems: 2, // Must have at least 2 options
+				maxItems: 4, // Can have up to 4 (for ranking)
+				description:
+					"An array of options for the user to choose from. MUST contain exactly 2 objects for 'forced_choice' type, and 3 or 4 objects for 'ranking' type.",
+				items: {
+					type: 'object',
+					properties: {
+						text: {
+							type: 'string',
+							description:
+								'The text of the option presented to the user (can be the value name or a descriptive phrase).'
+						}
+					},
+					required: ['text'], // Each option object must have 'text'
+					additionalProperties: false // No other properties allowed in option objects
+				}
+			},
+			values_being_compared: {
+				type: 'array',
+				minItems: 2, // Must compare at least 2 values
+				description: `An array containing the exact string names of the professional values being compared. EACH string MUST be one of the predefined 52 values.`,
+				items: {
+					type: 'string',
+					// *** CRITICAL SCHEMA CONSTRAINT ***
+					enum: PROFESSIONAL_VALUES,
+					description: 'An exact professional value name from the predefined list.'
+				}
+			}
+		},
+		required: ['id', 'type', 'text', 'options', 'values_being_compared'], // All top-level fields are required
+		additionalProperties: false // Disallow any extra top-level properties
+	}
+};
 
-Your objective is to dynamically generate or select a series of forced-choice or ranking questions based on the user's previous answers and the current scores of the values. Each question should be a comparison designed to help differentiate the user's most important values in a professional context.
+// --- System Prompt (v7 - Simplified for Schema Usage) ---
+const SYSTEM_PROMPT = `You are an AI assistant generating quiz questions to help a user identify their top 5 professional values.
+Your goal is to create informative questions based on the user's current value scores.
 
-Here is the complete list of the 52 professional values:
+You MUST respond ONLY with a JSON object that strictly adheres to the provided 'generateQuizQuestion' JSON schema.
+
+Here is the list of the 52 valid professional values:
 ${PROFESSIONAL_VALUES.join(', ')}
 
-You will receive input representing the current state of the quiz. This input will include:
-- The current score for each of the 52 values.
-- The number of questions remaining in Phase 2.
+Key Logic for Question Generation:
+- Receive current scores and remaining questions.
+- Generate the next question (either 'forced_choice' or 'ranking' type).
+- Focus on comparing values with high or similar scores to differentiate them.
+- Occasionally include lower-scored values to give them a chance.
+- Ensure the 'values_being_compared' array in your JSON output contains ONLY exact string matches from the provided list of 52 values.
+- Ensure the number of items in the 'options' array matches the question 'type' (2 for forced_choice, 3-4 for ranking).
+- Frame the question 'text' in a simple, professional scenario.
 
-Based on this input, you must determine the most informative question to ask next. Your goal is to select or generate a question that will provide the most useful information for narrowing down the user's top 5 values.
-
-When generating questions:
-- They must be either forced-choice (comparing two values) or ranking (comparing 3-4 values).
-- They must be framed in a realistic professional scenario or context.
-- You should primarily focus on comparing values that currently have high scores or similar scores, as these are the most likely candidates for the user's top values and need differentiation.
-- HOWEVER, it is critical to occasionally include values that currently have low scores and have not been compared frequently. This ensures that less-hinted values have a chance to be identified if they are important to the user. Strategically pair these less-hinted values with values the user has shown some interest in to make the comparison relevant.
-- Ensure the vocabulary is simple and easy to understand for an international audience.
-- Generate a unique ID for each question (e.g., a timestamp or random string).
-
-Your output MUST be a single JSON object representing the question to be presented to the user. Do NOT include any markdown formatting (like \`\`\`json) or any other text outside the JSON object itself. The JSON format should be strictly:
-{
-  "id": "[unique question ID string]",
-  "type": "forced_choice" | "ranking",
-  "text": "[Question text here, phrased as a professional scenario or choice]",
-  "options": [
-    {"text": "[Option 1 value or descriptive text related to the value]"},
-    {"text": "[Option 2 value or descriptive text related to the value]"}
-    // ... more options for ranking (up to 4 total)
-  ],
-  "values_being_compared": ["[Value A]", "[Value B]", ...] // List the *exact* value names from the list being compared
-}
-DO NOT PUT the JSON code in markdown just return the JSON object directly as a text. NO OTHER TEXT EXCEPT JSON OBJECT. PLEASE make sure not in markdown.
-Do NOT provide any text or explanation outside of the requested JSON object. Start by generating the first question based on the initial scores provided.`;
+Remember: Your entire output must be the JSON object conforming to the schema. No extra text.`;
 
 // --- Request Handler ---
 export const POST: RequestHandler = async ({ request }) => {
+	// Check if API key is configured
 	if (!OPENROUTER_API_KEY || OPENROUTER_API_KEY === 'your_openrouter_api_key_here') {
 		console.error('OpenRouter API key is not configured in .env');
 		throw svelteKitError(500, 'AI service is not configured on the server.');
 	}
+	// Optional: Check if model name is configured, otherwise use fallback
+	if (!OPENROUTER_MODEL) {
+		console.warn(
+			`OPENROUTER_MODEL environment variable not set, using default '${AI_MODEL}'. Ensure this model supports json_schema.`
+		);
+	}
 
 	let requestData: GenerateQuestionRequest;
 
+	// Parse request body
 	try {
 		requestData = await request.json();
 	} catch (err) {
@@ -66,70 +115,101 @@ export const POST: RequestHandler = async ({ request }) => {
 	const { scores, remainingQuestions } = requestData;
 
 	// --- Construct the prompt for the AI ---
-	// Convert scores object to a more readable format for the prompt
 	const scoresString = Object.entries(scores)
-		.sort(([, scoreA], [, scoreB]) => scoreB - scoreA) // Sort by score desc
+		.sort(([, scoreA], [, scoreB]) => scoreB - scoreA)
 		.map(([value, score]) => `${value}: ${score}`)
 		.join(', ');
 
-	const userPrompt = `Current scores: ${scoresString}. Questions remaining: ${remainingQuestions}. Generate the next question.`;
+	const userPrompt = `Current scores: ${scoresString}. Questions remaining: ${remainingQuestions}. Generate the next question using the 'generateQuizQuestion' JSON schema.`;
 
-	// Construct the messages array for the OpenRouter API
 	const messages = [
 		{ role: 'system', content: SYSTEM_PROMPT },
 		{ role: 'user', content: userPrompt }
-		// TODO: Potentially add history of previous questions/answers here if needed
 	];
 
 	// --- Call OpenRouter API ---
 	try {
-		console.log(`Calling OpenRouter (${AI_MODEL}) for next question...`);
+		console.log(`Calling OpenRouter (${AI_MODEL}) with JSON Schema for next question...`);
 		const response = await fetch(OPENROUTER_API_ENDPOINT, {
 			method: 'POST',
 			headers: {
 				Authorization: `Bearer ${OPENROUTER_API_KEY}`,
 				'Content-Type': 'application/json'
-				// Recommended headers by OpenRouter
-				// 'HTTP-Referer': $YOUR_SITE_URL, // Optional
-				// 'X-Title': $YOUR_SITE_NAME, // Optional
 			},
 			body: JSON.stringify({
 				model: AI_MODEL,
 				messages: messages,
-				// Optional parameters (temperature, max_tokens, etc.)
-				// temperature: 0.7,
-				// max_tokens: 250,
-				response_format: { type: 'json_object' } // Request JSON output if model supports it
+				// *** USE JSON SCHEMA ***
+				response_format: {
+					type: 'json_schema',
+					json_schema: quizQuestionSchema
+				}
 			})
 		});
 
+		// Note: We parse the body regardless of status code first,
+		// because OpenRouter often includes error details in the JSON body even for non-200 responses.
+		const data = await response.json();
+
+		// *** NEW: Check for error object in the response body ***
+		if (data && data.error) {
+			console.error(
+				`OpenRouter API returned an error object (HTTP Status: ${response.status}):`,
+				JSON.stringify(data.error, null, 2)
+			);
+			// Check specifically for rate limit error code 429
+			if (data.error.code === 429 || response.status === 429) {
+				throw svelteKitError(429, 'Rate limit exceeded. Please wait a moment and try again.');
+			}
+			// For other errors in the body, use the message if available
+			const errorMessage = data.error.message || 'AI service returned an unspecified error.';
+			// Use the original response status if it indicates an error, otherwise default to 500
+			const status = response.status >= 400 ? response.status : 500;
+			throw svelteKitError(status, `AI service error: ${errorMessage}`);
+		}
+
+		// If the *status code* itself indicates an error, but there was no error object in the body (less common)
 		if (!response.ok) {
-			const errorBody = await response.text();
-			console.error(`OpenRouter API error (${response.status}): ${errorBody}`);
+			console.error(
+				`OpenRouter API error (${response.status}) with unexpected body:`,
+				JSON.stringify(data, null, 2)
+			);
 			throw svelteKitError(response.status, `AI service error: ${response.statusText}`);
 		}
 
-		const data = await response.json();
-
-		// --- Validate and Parse AI Response ---
-		// The actual content is nested in choices[0].message.content
+		// --- Validate and Parse SUCCESSFUL AI Response ---
+		// Check basic structure from OpenRouter - WITH VERBOSE LOGGING
 		if (
-			!data.choices ||
-			!data.choices[0] ||
-			!data.choices[0].message ||
-			!data.choices[0].message.content
+			!data.choices || // Check if choices array exists
+			!Array.isArray(data.choices) || // Check if choices is an array
+			data.choices.length === 0 || // Check if choices array is empty
+			!data.choices[0] || // Check if the first choice exists
+			!data.choices[0].message || // Check if message object exists
+			!data.choices[0].message.content // Check if content exists
 		) {
-			console.error('Invalid response structure from OpenRouter:', data);
-			throw svelteKitError(500, 'AI service returned an invalid response structure.');
+			// Log the problematic structure received from the API in detail
+			console.error(
+				"Invalid success response structure received from OpenRouter. Expected 'choices[0].message.content' path to exist and be non-empty. Received structure:",
+				JSON.stringify(data, null, 2) // Pretty-print the received data object
+			);
+			// Keep the client-facing error message relatively concise, but the server log now has details
+			throw svelteKitError(
+				500,
+				'AI service returned an invalid success response structure (check server logs for details).'
+			);
 		}
 
 		let aiResponseContent: GenerateQuestionResponse;
 		try {
-			// The content itself should be the JSON string we asked for
-			aiResponseContent = JSON.parse(data.choices[0].message.content);
+			// The content should already be the valid JSON object string
+			const rawContent = data.choices[0].message.content;
+			console.log('Raw AI response content (expected JSON):', rawContent);
+
+			// Parse the JSON (extraction/cleaning should no longer be needed)
+			aiResponseContent = JSON.parse(rawContent);
 			console.log('Received AI Response (parsed):', aiResponseContent);
 
-			// Basic validation of the received structure
+			// Optional: Minimal validation as a safety check (schema should prevent these)
 			if (
 				!aiResponseContent.id ||
 				!aiResponseContent.type ||
@@ -137,35 +217,51 @@ export const POST: RequestHandler = async ({ request }) => {
 				!aiResponseContent.options ||
 				!aiResponseContent.values_being_compared
 			) {
-				throw new Error('AI response missing required fields.');
+				console.warn('Parsed AI response missing expected fields despite schema request.');
 			}
-			if (!['forced_choice', 'ranking'].includes(aiResponseContent.type)) {
-				throw new Error('Invalid question type in AI response.');
+			for (const val of aiResponseContent.values_being_compared) {
+				if (!PROFESSIONAL_VALUES.includes(val)) {
+					console.error(
+						'Validation Error: Value found not in master list despite schema enum:',
+						val
+					);
+					throw new Error(
+						`Value "${val}" in 'values_being_compared' is not one of the 52 predefined values. Schema enforcement might have failed or model ignored it.`
+					);
+				}
 			}
-			if (!Array.isArray(aiResponseContent.options) || aiResponseContent.options.length < 2) {
-				throw new Error('Invalid options array in AI response.');
-			}
+		} catch (parseOrValidationError: any) {
+			console.error(
+				'Failed to parse or validate JSON from AI response content:',
+				parseOrValidationError
+			);
 			if (
-				!Array.isArray(aiResponseContent.values_being_compared) ||
-				aiResponseContent.values_being_compared.length < 2
+				data.choices &&
+				data.choices[0] &&
+				data.choices[0].message &&
+				data.choices[0].message.content
 			) {
-				throw new Error('Invalid values_being_compared array in AI response.');
+				console.error(
+					'Original Raw AI response content (on error):',
+					data.choices[0].message.content
+				);
 			}
-		} catch (parseError) {
-			console.error('Failed to parse JSON from AI response content:', parseError);
-			console.error('Raw AI response content:', data.choices[0].message.content);
-			throw svelteKitError(500, 'AI service returned malformed JSON.');
+			throw svelteKitError(
+				500,
+				`AI service response handling error: ${parseOrValidationError.message}`
+			);
 		}
 
-		// Return the parsed question JSON to the frontend
+		// Return the validated (schema-enforced) question JSON
 		return json(aiResponseContent);
 	} catch (err: any) {
+		// Catch errors from fetch, parsing, validation, or explicitly thrown svelteKitError
 		console.error('Error during AI API call or processing:', err);
-		// Avoid leaking internal details; use the status/message from svelteKitError if available
-		if (err.status) {
-			throw err; // Re-throw SvelteKit errors
+		// If it's already a SvelteKit error, re-throw it
+		if (err.status && err.body) {
+			throw err;
 		}
-		// Throw a generic internal server error for other cases
+		// Otherwise, wrap it in a generic 500 error
 		throw svelteKitError(
 			500,
 			'Failed to generate the next question due to an internal server error.'

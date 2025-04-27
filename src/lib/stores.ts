@@ -18,12 +18,10 @@ const initializeScores = (): ValueScores => {
 export const quizPhase = writable<QuizPhase>('start');
 
 // Scores for each professional value
-// Attempt to load from localStorage if in browser
 const storedScores = browser ? localStorage.getItem('valueScores') : null;
 const initialScores = storedScores ? JSON.parse(storedScores) : initializeScores();
 export const valueScores = writable<ValueScores>(initialScores);
 
-// Subscribe to score changes and save to localStorage
 if (browser) {
 	valueScores.subscribe((scores) => {
 		localStorage.setItem('valueScores', JSON.stringify(scores));
@@ -49,6 +47,9 @@ export const currentPhase2Question = writable<Phase2Question | null>(null);
 // Store error messages
 export const errorMessage = writable<string | null>(null);
 
+// *** NEW: Store to indicate if a retry is possible for the current error ***
+export const retryPossible = writable<boolean>(false);
+
 // --- Helper Functions ---
 
 // Function to reset the quiz state
@@ -58,10 +59,8 @@ export function resetQuiz() {
 	currentQuestionIndex.set(0);
 	currentPhase2Question.set(null);
 	errorMessage.set(null);
-	if (browser) {
-		localStorage.removeItem('valueScores');
-		localStorage.removeItem('currentQuestionIndex');
-	}
+	retryPossible.set(false); // Reset retry state
+	clearLocalStorage(); // Clear storage on explicit reset
 }
 
 // Function to safely clear localStorage on explicit reset
@@ -69,5 +68,6 @@ export function clearLocalStorage() {
 	if (browser) {
 		localStorage.removeItem('valueScores');
 		localStorage.removeItem('currentQuestionIndex');
+		// Optionally clear other related items if added later
 	}
 }
