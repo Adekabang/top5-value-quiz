@@ -105,6 +105,13 @@
 
 	function resumeQuiz() {
 		showResumePrompt = false;
+		// Determine the correct phase based on the current question index
+		if ($currentQuestionIndex <= TOTAL_PHASE_1_QUESTIONS) {
+			quizPhase.set('phase1');
+		} else if ($currentQuestionIndex <= TOTAL_QUESTIONS) {
+			quizPhase.set('phase2');
+		}
+		// Now let determinePhaseAndQuestion handle loading the correct question
 		determinePhaseAndQuestion();
 	}
 	function startNewQuiz() {
@@ -121,10 +128,18 @@
 	function setCurrentQuestion() {
 		const index = $currentQuestionIndex;
 		if ($quizPhase === 'phase1' && index > 0 && index <= TOTAL_PHASE_1_QUESTIONS) {
+			// When setting a phase1 question, make sure we load the correct one (index-1 since array is 0-based)
 			currentQuestion = phase1Questions[index - 1];
+			console.log('Setting Phase 1 question:', index, currentQuestion);
 		} else if ($quizPhase === 'phase2' && $currentPhase2Question) {
 			currentQuestion = $currentPhase2Question;
+			console.log('Setting Phase 2 question:', index, currentQuestion);
+		} else if ($quizPhase === 'phase2' && !$currentPhase2Question && !isLoading) {
+			// If we're in phase2 but don't have a question yet, trigger fetch
+			console.log('No Phase 2 question available, triggering fetch');
+			fetchNextPhase2Question();
 		} else {
+			console.log('Unable to set current question. Phase:', $quizPhase, 'Index:', index);
 			currentQuestion = null;
 		}
 	}
@@ -399,47 +414,41 @@
 		if (!isLoading && !$retryPossible) {
 			errorMessage.set(null);
 		}
-		// Don't reset retryPossible here, let the retry buttons handle it
 
 		switch (phase) {
 			case 'start':
-			case 'results': // If already in results, do nothing more
-			case 'error': // If in critical error state, do nothing more
+			case 'results':
+			case 'error':
 				currentQuestion = null;
 				return;
 			case 'evaluating':
 				currentQuestion = null;
-				// Trigger evaluation/review process if not already loading/in error
 				if (!isLoading && !$retryPossible) {
-					// Check if evaluation is done, if so, trigger review
 					if ($evaluatedTop5 && !$reviewText) {
 						console.log('State: Evaluating - Top 5 found, review missing. Triggering review.');
 						generateReviewText();
-					}
-					// Otherwise, trigger evaluation (which then triggers review)
-					else if (!$evaluatedTop5) {
+					} else if (!$evaluatedTop5) {
 						console.log('State: Evaluating - Top 5 missing. Triggering evaluation.');
 						evaluateAnswers();
 					} else {
-						// Both exist, should be in 'results' phase, but handle defensively
 						console.log('State: Evaluating - Both top 5 and review exist. Moving to results.');
 						quizPhase.set('results');
 					}
-				} else {
-					console.log(
-						`State: Evaluating - Skipped trigger (isLoading: ${isLoading}, retryPossible: ${$retryPossible})`
-					);
 				}
-				return; // Stay in evaluating phase until generateReviewText sets it to 'results'
+				return;
 			case 'phase1':
 				if (index > 0 && index <= TOTAL_PHASE_1_QUESTIONS && phase1Questions.length > 0) {
 					currentQuestion = phase1Questions[index - 1];
+					// Make sure we're in phase1
+					quizPhase.set('phase1');
 				} else {
 					currentQuestion = null;
-				} // Handle edge case
+				}
 				return;
 			case 'phase2':
 				if (index > TOTAL_PHASE_1_QUESTIONS && index <= TOTAL_QUESTIONS) {
+					// Make sure we're in phase2
+					quizPhase.set('phase2');
 					if (!$currentPhase2Question && !isLoading && !$retryPossible) {
 						fetchNextPhase2Question();
 					} else if ($currentPhase2Question) {
@@ -447,10 +456,9 @@
 					}
 				} else {
 					currentQuestion = null;
-				} // Handle edge case
+				}
 				return;
 			default:
-				// Should not happen with defined phases, but reset just in case
 				console.warn('State: Unknown phase detected, resetting to start.');
 				currentQuestion = null;
 				quizPhase.set('start');
@@ -601,7 +609,7 @@
 				xmlns="http://www.w3.org/2000/svg"
 				class="h-6 w-6 shrink-0 stroke-current"
 				fill="none"
-				viewBox="0 0 24 24"
+				viewBox="0 24 24"
 				><path
 					stroke-linecap="round"
 					stroke-linejoin="round"

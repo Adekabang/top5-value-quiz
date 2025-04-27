@@ -15,10 +15,18 @@ const initializeScores = (): ValueScores => {
 
 // --- Store Definitions ---
 
-// Current phase of the quiz
+// Current phase of the quiz - now with localStorage persistence
+const storedPhase = browser ? localStorage.getItem('quizPhase') : null;
+const initialPhase = storedPhase || 'start';
 export const quizPhase = writable<
 	'start' | 'phase1' | 'phase2' | 'evaluating' | 'results' | 'loading' | 'error'
->('start');
+>(initialPhase as any);
+
+if (browser) {
+	quizPhase.subscribe((phase) => {
+		localStorage.setItem('quizPhase', phase);
+	});
+}
 
 // Scores for each professional value
 const storedScores = browser ? localStorage.getItem('valueScores') : null;
@@ -94,5 +102,6 @@ export function clearLocalStorage() {
 		localStorage.removeItem('valueScores');
 		localStorage.removeItem('currentQuestionIndex');
 		localStorage.removeItem('quizHistory'); // Remove history from storage
+		localStorage.removeItem('quizPhase'); // Remove phase from storage
 	}
 }
