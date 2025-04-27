@@ -55,7 +55,7 @@
 		{:else if question.type === 'forced_choice'}
 			<div class="flex flex-col space-y-3 sm:flex-row sm:justify-center sm:space-y-0 sm:space-x-4">
 				{#each question.options as option (option.text)}
-					<button class="btn btn-primary flex-1" on:click={() => handleForcedChoice(option)}>
+					<button class="btn btn-primary flex-1 py-10" on:click={() => handleForcedChoice(option)}>
 						{option.text}
 					</button>
 				{/each}

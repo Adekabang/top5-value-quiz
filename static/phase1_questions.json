@@ -2,14 +2,14 @@
 	{
 		"id": 1,
 		"type": "simple_choice",
-		"text": "When starting a major project, what's your initial focus?",
+		"text": "When you start a big project, what do you think about first?",
 		"options": [
 			{
-				"text": "Developing a detailed plan and logical structure, ensuring you have the necessary influence.",
+				"text": "Making a clear plan and structure, and making sure you can influence things.",
 				"value_area_hint": ["Control", "Reason", "Power"]
 			},
 			{
-				"text": "Building team rapport and ensuring mutual understanding and collaboration.",
+				"text": "Building good relationships with the team and making sure everyone understands each other and works together.",
 				"value_area_hint": ["Community", "Respect", "Harmony"]
 			}
 		]
@@ -17,14 +17,14 @@
 	{
 		"id": 2,
 		"type": "simple_choice",
-		"text": "What's more crucial for your daily work satisfaction?",
+		"text": "What is more important for you to be happy at work every day?",
 		"options": [
 			{
-				"text": "Ensuring your work meets high standards and aligns with ethical principles.",
+				"text": "Making sure your work is high quality and follows good rules.",
 				"value_area_hint": ["Quality", "Integrity", "Conscientious"]
 			},
 			{
-				"text": "Having autonomy, adaptability in how you work, and finding enjoyment in it.",
+				"text": "Being able to work how you want, change things easily, and enjoy your work.",
 				"value_area_hint": ["Freedom", "Flexibility", "Joy"]
 			}
 		]
@@ -32,14 +32,14 @@
 	{
 		"id": 3,
 		"type": "simple_choice",
-		"text": "When facing a complex professional challenge, you lean towards:",
+		"text": "When you have a difficult work problem, you usually:",
 		"options": [
 			{
-				"text": "Exploring novel ideas, potential breakthroughs, and maintaining optimism.",
+				"text": "Look for new ideas, possible breakthroughs, and stay positive.",
 				"value_area_hint": ["Creativity", "Possibility", "Hope"]
 			},
 			{
-				"text": "Applying intellectual rigor, deep curiosity, and understanding the underlying feelings involved.",
+				"text": "Use your brain, be very curious, and understand the feelings involved.",
 				"value_area_hint": ["Intelligence", "Wonder", "Emotion"]
 			}
 		]
@@ -47,14 +47,14 @@
 	{
 		"id": 4,
 		"type": "simple_choice",
-		"text": "In your interactions with colleagues, you prioritize:",
+		"text": "When you talk with your coworkers, you think it's most important to be:",
 		"options": [
 			{
-				"text": "Being direct, open, and truthful, handled with consideration.",
+				"text": "Direct, open, and honest, but also thoughtful.",
 				"value_area_hint": ["Honesty", "Transparency", "Grace"]
 			},
 			{
-				"text": "Showing empathy, considering the human element and personal connections.",
+				"text": "Understanding others' feelings, thinking about the people side, and personal connections.",
 				"value_area_hint": ["Compassion", "Humanity", "Family"]
 			}
 		]
@@ -62,14 +62,14 @@
 	{
 		"id": 5,
 		"type": "simple_choice",
-		"text": "What primarily motivates you to take on new professional challenges?",
+		"text": "What makes you want to take on new work challenges the most?",
 		"options": [
 			{
-				"text": "The opportunity to learn, pursue your interests, and accomplish goals.",
+				"text": "The chance to learn, follow your interests, and reach your goals.",
 				"value_area_hint": ["Growth", "Passion", "Achievement"]
 			},
 			{
-				"text": "The potential for external validation and financial gain.",
+				"text": "Getting praise from others and earning money.",
 				"value_area_hint": ["Recognition", "Wealth"]
 			}
 		]
@@ -77,14 +77,14 @@
 	{
 		"id": 6,
 		"type": "simple_choice",
-		"text": "In a demanding work environment, what's most essential for you?",
+		"text": "When work is hard, what is most important for you?",
 		"options": [
 			{
-				"text": "Maintaining equilibrium, personal contentment, and physical well-being.",
+				"text": "Keeping things balanced, being personally happy, and being healthy.",
 				"value_area_hint": ["Balance", "Happiness", "Fitness"]
 			},
 			{
-				"text": "Showing courage and dedication through difficulties.",
+				"text": "Being brave and dedicated even when things are difficult.",
 				"value_area_hint": ["Bravery", "Commitment"]
 			}
 		]
@@ -92,29 +92,26 @@
 	{
 		"id": 7,
 		"type": "simple_choice",
-		"text": "What kind of professional relationships do you value most?",
+		"text": "What kind of work relationships do you care about the most?",
 		"options": [
 			{
-				"text": "Those built on mutual dependability and reliability.",
+				"text": "Those where you can always count on each other.",
 				"value_area_hint": ["Loyalty", "Trust"]
 			},
-			{
-				"text": "Those that provide a sense of camaraderie and lightheartedness.",
-				"value_area_hint": ["Friendship", "Fun"]
-			}
+			{ "text": "Those that feel friendly and fun.", "value_area_hint": ["Friendship", "Fun"] }
 		]
 	},
 	{
 		"id": 8,
 		"type": "simple_choice",
-		"text": "When leading a team or project, your focus is on:",
+		"text": "When you are leading a team or project, you focus on:",
 		"options": [
 			{
-				"text": "Motivating others towards a compelling shared vision.",
+				"text": "Inspiring others towards a shared and exciting goal.",
 				"value_area_hint": ["Inspiration", "Leadership"]
 			},
 			{
-				"text": "Ensuring tasks are done effectively and taking decisive initiative.",
+				"text": "Making sure tasks are done well and taking charge.",
 				"value_area_hint": ["Responsibility", "Action"]
 			}
 		]
@@ -122,14 +119,14 @@
 	{
 		"id": 9,
 		"type": "simple_choice",
-		"text": "What's your general approach towards professional risk?",
+		"text": "How do you usually feel about risks at work?",
 		"options": [
 			{
-				"text": "Prioritizing safety and a predictable path, trusting the process.",
+				"text": "You prefer safety and a clear path, trusting that things will work out.",
 				"value_area_hint": ["Security", "Faith"]
 			},
 			{
-				"text": "Embracing new opportunities with energy and appropriate self-awareness.",
+				"text": "You like to try new things with energy and are aware of yourself.",
 				"value_area_hint": ["Enthusiasm", "Confidence", "Humility"]
 			}
 		]
@@ -137,14 +134,14 @@
 	{
 		"id": 10,
 		"type": "simple_choice",
-		"text": "What gives you a deeper sense of meaning in your work?",
+		"text": "What makes your work feel more meaningful to you?",
 		"options": [
 			{
-				"text": "Contributing to justice and ensuring equal opportunities for others.",
+				"text": "Helping to make things fair and equal for others.",
 				"value_area_hint": ["Fairness", "Equality"]
 			},
 			{
-				"text": "Aligning your work with your core beliefs and personal code.",
+				"text": "Doing work that matches your deepest beliefs and personal rules.",
 				"value_area_hint": ["Spirituality", "Values"]
 			}
 		]
