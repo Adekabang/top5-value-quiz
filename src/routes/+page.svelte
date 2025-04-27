@@ -36,6 +36,7 @@
 	import QuestionCard from '$lib/components/QuestionCard.svelte';
 	import ProgressBar from '$lib/components/ProgressBar.svelte';
 	import ResultsDisplay from '$lib/components/ResultsDisplay.svelte';
+	import ValueCarousel from '$lib/components/ValueCarousel.svelte';
 
 	let phase1Questions: Phase1Question[] = [];
 	let currentQuestion: QuizQuestion | null = null;
@@ -494,6 +495,10 @@
 		<div class="card bg-base-100 w-full max-w-md shadow-xl">
 			<div class="card-body items-center text-center">
 				<h1 class="card-title mb-4 text-3xl">Find Your Top 5 Professional Values</h1>
+				<!-- Add the carousel -->
+				<div class="mb-6 w-full">
+					<ValueCarousel />
+				</div>
 				<p class="mb-6">
 					Answer a series of questions to discover the values that matter most to you in your work
 					life.
