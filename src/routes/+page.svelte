@@ -40,6 +40,19 @@
 	let isLoading = false;
 	let showResumePrompt = false;
 
+	// Add type guard functions
+	function isPhase1(phase: string): phase is 'phase1' {
+		return phase === 'phase1';
+	}
+
+	function isPhase2(phase: string): phase is 'phase2' {
+		return phase === 'phase2';
+	}
+
+	function isEvaluating(phase: string): phase is 'evaluating' {
+		return phase === 'evaluating';
+	}
+
 	// onMount, resumeQuiz, startNewQuiz, startQuiz, setCurrentQuestion remain the same...
 	onMount(async () => {
 		try {
@@ -297,57 +310,52 @@
 	}
 
 	// --- Updated determinePhaseAndQuestion ---
-	function determinePhaseAndQuestion(phase: QuizPhase = $quizPhase, index = $currentQuestionIndex) {
+	function determinePhaseAndQuestion(
+		phase:
+			| 'start'
+			| 'phase1'
+			| 'phase2'
+			| 'evaluating'
+			| 'results'
+			| 'loading'
+			| 'error' = $quizPhase,
+		index = $currentQuestionIndex
+	) {
 		if (!isLoading) {
 			errorMessage.set(null);
 			retryPossible.set(false);
 		}
 
-		const validPhases = [
-			'start',
-			'phase1',
-			'phase2',
-			'evaluating',
-			'results',
-			'loading',
-			'error'
-		] as const;
-		const currentPhase = validPhases.includes(phase as any) ? phase : 'start';
-
 		// Handle special phases first
-		if (['start', 'results', 'error'].includes(currentPhase)) {
-			currentQuestion = null;
-			return;
-		}
-
-		// *** Handle EVALUATING phase ***
-		if (currentPhase === 'evaluating') {
-			currentQuestion = null; // No question displayed during evaluation
-			if (!isLoading && !$errorMessage) {
-				// Only call if not already loading/in error
-				evaluateAnswers();
-			}
-			return; // Don't proceed further in this phase
-		}
-
-		if (index > 0 && index <= TOTAL_PHASE_1_QUESTIONS) {
-			if (currentPhase !== 'phase1') quizPhase.set('phase1');
-			if (phase1Questions.length > 0) {
-				currentQuestion = phase1Questions[index - 1];
-			}
-		} else if (index > TOTAL_PHASE_1_QUESTIONS && index <= TOTAL_QUESTIONS) {
-			if (currentPhase !== 'phase2') quizPhase.set('phase2');
-			if (!$currentPhase2Question && !isLoading) {
-				fetchNextPhase2Question();
-			} else if ($currentPhase2Question) {
-				currentQuestion = $currentPhase2Question;
-			}
-		}
-		// Note: index > TOTAL_QUESTIONS case is handled by 'results' phase check above
-		else {
-			// Default to start if index is 0 or invalid and not handled above
-			if (currentPhase !== 'start') quizPhase.set('start');
-			currentQuestion = null;
+		switch (phase) {
+			case 'start':
+			case 'results':
+			case 'error':
+				currentQuestion = null;
+				return;
+			case 'evaluating':
+				currentQuestion = null; // No question displayed during evaluation
+				if (!isLoading && !$errorMessage) {
+					evaluateAnswers();
+				}
+				return;
+			case 'phase1':
+				if (index > 0 && index <= TOTAL_PHASE_1_QUESTIONS && phase1Questions.length > 0) {
+					currentQuestion = phase1Questions[index - 1];
+				}
+				return;
+			case 'phase2':
+				if (index > TOTAL_PHASE_1_QUESTIONS && index <= TOTAL_QUESTIONS) {
+					if (!$currentPhase2Question && !isLoading) {
+						fetchNextPhase2Question();
+					} else if ($currentPhase2Question) {
+						currentQuestion = $currentPhase2Question;
+					}
+				}
+				return;
+			default:
+				currentQuestion = null;
+				quizPhase.set('start');
 		}
 	}
 </script>
@@ -387,12 +395,12 @@
 				<button class="btn btn-primary btn-lg" on:click={startQuiz}> Start Quiz </button>
 			</div>
 		</div>
-	{:else if $quizPhase === 'phase1' || $quizPhase === 'phase2'}
+	{:else if isPhase1($quizPhase) || isPhase2($quizPhase)}
 		<!-- Progress Bar -->
 		<ProgressBar
 			current={$currentQuestionIndex}
 			total={TOTAL_QUESTIONS}
-			phase={$quizPhase === 'phase1'
+			phase={isPhase1($quizPhase)
 				? `Phase 1 (${TOTAL_PHASE_1_QUESTIONS} questions)`
 				: `Phase 2 (${TOTAL_PHASE_2_QUESTIONS} questions)`}
 		/>
@@ -401,7 +409,7 @@
 		{#if isLoading}
 			<div class="my-10 text-center">
 				<span class="loading loading-lg loading-spinner text-primary"></span>
-				{#if $quizPhase === 'phase2'}
+				{#if isPhase2($quizPhase)}
 					<p>Generating next question...</p>
 				{/if}
 			</div>
@@ -426,9 +434,9 @@
 				<span>Error: {$errorMessage}</span>
 				{#if $retryPossible}
 					<!-- Use specific retry function based on phase -->
-					{#if $quizPhase === 'phase2'}
+					{#if isPhase2($quizPhase)}
 						<button class="btn btn-sm btn-primary" on:click={retryFetchQuestion}> Retry </button>
-					{:else if $quizPhase === 'evaluating'}
+					{:else if isEvaluating($quizPhase)}
 						<button class="btn btn-sm btn-primary" on:click={retryEvaluation}>
 							Retry Evaluation
 						</button>
@@ -445,7 +453,7 @@
 		{/if}
 
 		<!-- *** NEW: Evaluating Phase UI *** -->
-	{:else if $quizPhase === 'evaluating'}
+	{:else if isEvaluating($quizPhase)}
 		<!-- Progress Bar (Optional: Show progress at 100% or hide) -->
 		<ProgressBar current={TOTAL_QUESTIONS} total={TOTAL_QUESTIONS} phase="Evaluating" />
 		<!-- Loading/Evaluating Indicator -->

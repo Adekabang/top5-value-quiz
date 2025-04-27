@@ -16,7 +16,9 @@ const initializeScores = (): ValueScores => {
 // --- Store Definitions ---
 
 // Current phase of the quiz
-export const quizPhase = writable<QuizPhase>('start');
+export const quizPhase = writable<
+	'start' | 'phase1' | 'phase2' | 'evaluating' | 'results' | 'loading' | 'error'
+>('start');
 
 // Scores for each professional value
 const storedScores = browser ? localStorage.getItem('valueScores') : null;
