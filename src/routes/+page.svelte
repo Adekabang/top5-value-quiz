@@ -491,7 +491,7 @@
 		{/if}
 	{:else if $quizPhase === 'results'}
 		<!-- Results Display - Pass the evaluated results -->
-		<ResultsDisplay topValuesResult={$evaluatedTop5} />
+		<ResultsDisplay topValuesResult={$evaluatedTop5} finalScores={$valueScores} />
 	{:else if $quizPhase === 'error' && !isLoading}
 		<!-- General Error Display -->
 		<div role="alert" class="alert alert-error mx-auto max-w-xl">
