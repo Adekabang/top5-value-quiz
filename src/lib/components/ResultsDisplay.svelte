@@ -1,36 +1,30 @@
 <script lang="ts">
-    import { valueScores, resetQuiz } from '$lib/stores';
-    import type { ValueScores } from '$lib/types';
-
-    export let finalScores: ValueScores;
-
-    $: topValues = Object.entries(finalScores)
-        .sort(([, scoreA], [, scoreB]) => scoreB - scoreA) // Sort descending by score
-        .slice(0, 5); // Take top 5
-
+	import { resetQuiz } from '$lib/stores';
+	// *** Accept the evaluated list directly ***
+	export let topValuesResult: string[] | null;
 </script>
 
-<div class="card w-full max-w-md bg-base-100 shadow-xl mx-auto">
-    <div class="card-body items-center text-center">
-        <h2 class="card-title text-2xl mb-4">Your Top 5 Professional Values</h2>
-        {#if topValues.length > 0}
-            <ul class="list-none p-0 text-lg space-y-2">
-                {#each topValues as [value, score], index (value)}
-                    <li class="p-2 rounded">
-                       <span class="font-bold text-primary">{index + 1}. {value}</span>
-                       <!-- Optional: Show score -->
-                       <!-- <span class="text-sm text-base-content/60"> (Score: {score})</span> -->
-                    </li>
-                {/each}
-            </ul>
-        {:else}
-            <p>Could not determine top values. Please try the quiz again.</p>
-        {/if}
+<div class="card bg-base-100 mx-auto w-full max-w-md shadow-xl">
+	<div class="card-body items-center text-center">
+		<h2 class="card-title mb-4 text-2xl">Your Top 5 Professional Values</h2>
+		{#if topValuesResult && topValuesResult.length === 5}
+			<p class="text-base-content/70 mb-4 text-sm">(Based on AI analysis of your choices)</p>
+			<ul class="list-none space-y-2 p-0 text-lg">
+				{#each topValuesResult as value, index (value)}
+					<li class="rounded p-2">
+						<span class="text-primary font-bold">{index + 1}. {value}</span>
+					</li>
+				{/each}
+			</ul>
+		{:else}
+			<p>Could not determine top values. Please try the quiz again.</p>
+			<!-- Optional: Add message if evaluation failed but scores exist -->
+			<!-- <p>Evaluation failed. Showing results based on scores:</p> -->
+			<!-- Add logic here to show score-based results as fallback if needed -->
+		{/if}
 
-        <div class="card-actions justify-center mt-6">
-            <button class="btn btn-primary" on:click={resetQuiz}>
-                Restart Quiz
-            </button>
-        </div>
-    </div>
+		<div class="card-actions mt-6 justify-center">
+			<button class="btn btn-primary" on:click={resetQuiz}> Restart Quiz </button>
+		</div>
+	</div>
 </div>

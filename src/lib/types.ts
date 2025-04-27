@@ -35,15 +35,46 @@ export interface Phase2Question {
 export type QuizQuestion = Phase1Question | Phase2Question;
 
 // Type for the state of the quiz
-export type QuizPhase = 'start' | 'phase1' | 'phase2' | 'results' | 'loading' | 'error';
+// *** ADD 'evaluating' phase ***
+export type QuizPhase =
+	| 'start'
+	| 'phase1'
+	| 'phase2'
+	| 'evaluating'
+	| 'results'
+	| 'loading'
+	| 'error';
 
-// Type for the request body sent to the AI API proxy
+// Type for the request body sent to the AI API proxy for question generation
 export interface GenerateQuestionRequest {
 	scores: ValueScores;
 	valuesList: string[];
 	remainingQuestions: number;
-	history?: Phase2Question[]; // Optional: Send history for better context
+	history?: AnswerRecord[]; // Optional: Send history for better context
 }
 
 // Type for the response from the AI API proxy (which is the Phase2Question)
 export type GenerateQuestionResponse = Phase2Question;
+
+// *** NEW: Type for storing a single answer record ***
+export interface AnswerRecord {
+	questionId: number | string;
+	questionText: string;
+	questionType: 'simple_choice' | 'forced_choice' | 'ranking';
+	// Store selected option text(s) or ranked list of texts
+	answer: string | string[];
+	// Store hints/compared values for context
+	valuesInvolved: string[];
+	timestamp: number; // Optional: for ordering/debugging
+}
+
+// *** NEW: Type for the request body sent to the evaluation API ***
+export interface EvaluateAnswersRequest {
+	history: AnswerRecord[];
+	finalScores: ValueScores; // Send final scores for context too
+}
+
+// *** NEW: Type for the response from the evaluation API ***
+export interface EvaluateAnswersResponse {
+	top5Values: string[]; // Expecting an array of 5 value strings
+}

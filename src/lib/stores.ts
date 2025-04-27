@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
-import type { ValueScores, QuizPhase, Phase2Question } from './types';
+// *** Import new types ***
+import type { ValueScores, QuizPhase, Phase2Question, AnswerRecord } from './types';
 import { PROFESSIONAL_VALUES } from './constants';
 import { browser } from '$app/environment';
 
@@ -47,8 +48,23 @@ export const currentPhase2Question = writable<Phase2Question | null>(null);
 // Store error messages
 export const errorMessage = writable<string | null>(null);
 
-// *** NEW: Store to indicate if a retry is possible for the current error ***
+// Store to indicate if a retry is possible for the current error
 export const retryPossible = writable<boolean>(false);
+
+// *** NEW: Store for the quiz answer history ***
+const storedHistory = browser ? localStorage.getItem('quizHistory') : null;
+const initialHistory = storedHistory ? JSON.parse(storedHistory) : [];
+export const quizHistory = writable<AnswerRecord[]>(initialHistory);
+
+if (browser) {
+	quizHistory.subscribe((history) => {
+		localStorage.setItem('quizHistory', JSON.stringify(history));
+	});
+}
+
+// *** NEW: Store for the final AI-evaluated results ***
+// Do not persist this, calculate fresh each time
+export const evaluatedTop5 = writable<string[] | null>(null);
 
 // --- Helper Functions ---
 
@@ -59,7 +75,9 @@ export function resetQuiz() {
 	currentQuestionIndex.set(0);
 	currentPhase2Question.set(null);
 	errorMessage.set(null);
-	retryPossible.set(false); // Reset retry state
+	retryPossible.set(false);
+	quizHistory.set([]); // Clear history store
+	evaluatedTop5.set(null); // Clear evaluated results store
 	clearLocalStorage(); // Clear storage on explicit reset
 }
 
@@ -68,6 +86,6 @@ export function clearLocalStorage() {
 	if (browser) {
 		localStorage.removeItem('valueScores');
 		localStorage.removeItem('currentQuestionIndex');
-		// Optionally clear other related items if added later
+		localStorage.removeItem('quizHistory'); // Remove history from storage
 	}
 }
