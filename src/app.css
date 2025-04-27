@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@plugin "daisyui";
 @import '@fontsource/fira-mono';
 
 :root {

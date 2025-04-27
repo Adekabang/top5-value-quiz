@@ -1,0 +1,152 @@
+[
+	{
+		"id": 1,
+		"type": "simple_choice",
+		"text": "When starting a major project at work, what is your first priority?",
+		"options": [
+			{
+				"text": "Defining clear goals and a step-by-step plan.",
+				"value_area_hint": ["Achievement", "Control", "Conscientious"]
+			},
+			{
+				"text": "Gathering the right team and ensuring good communication.",
+				"value_area_hint": ["Community", "Communication", "Harmony"]
+			}
+		]
+	},
+	{
+		"id": 2,
+		"type": "simple_choice",
+		"text": "What is a key factor in your daily work satisfaction?",
+		"options": [
+			{
+				"text": "Completing tasks accurately and to a high standard.",
+				"value_area_hint": ["Quality", "Conscientious"]
+			},
+			{
+				"text": "Having the flexibility to manage your own time and tasks.",
+				"value_area_hint": ["Freedom", "Flexibility"]
+			}
+		]
+	},
+	{
+		"id": 3,
+		"type": "simple_choice",
+		"text": "When facing a challenging professional obstacle, what approach do you lean towards?",
+		"options": [
+			{
+				"text": "Finding an innovative and creative solution.",
+				"value_area_hint": ["Creativity", "Possibility"]
+			},
+			{
+				"text": "Systematically analyzing the problem to find a logical solution.",
+				"value_area_hint": ["Reason", "Intelligence"]
+			}
+		]
+	},
+	{
+		"id": 4,
+		"type": "simple_choice",
+		"text": "In dealing with colleagues, what do you find most important?",
+		"options": [
+			{
+				"text": "Being open and truthful in all interactions.",
+				"value_area_hint": ["Honesty", "Transparency", "Integrity"]
+			},
+			{
+				"text": "Showing understanding and support for their challenges.",
+				"value_area_hint": ["Compassion", "Respect"]
+			}
+		]
+	},
+	{
+		"id": 5,
+		"type": "simple_choice",
+		"text": "What motivates you to take on new professional challenges?",
+		"options": [
+			{
+				"text": "The opportunity for personal and professional Growth.",
+				"value_area_hint": ["Growth", "Achievement"]
+			},
+			{
+				"text": "The potential for Recognition and reward.",
+				"value_area_hint": ["Recognition", "Wealth"]
+			}
+		]
+	},
+	{
+		"id": 6,
+		"type": "simple_choice",
+		"text": "In a fast-paced work environment, what is most essential?",
+		"options": [
+			{
+				"text": "Maintaining a sense of Balance and avoiding burnout.",
+				"value_area_hint": ["Balance"]
+			},
+			{
+				"text": "Having the Resilience to bounce back from setbacks.",
+				"value_area_hint": ["Bravery", "Commitment"]
+			}
+		]
+	},
+	{
+		"id": 7,
+		"type": "simple_choice",
+		"text": "What kind of professional relationships do you value most?",
+		"options": [
+			{
+				"text": "Those based on mutual Loyalty and dependability.",
+				"value_area_hint": ["Loyalty", "Trust"]
+			},
+			{
+				"text": "Those that provide a sense of camaraderie and Fun.",
+				"value_area_hint": ["Fun", "Friendship"]
+			}
+		]
+	},
+	{
+		"id": 8,
+		"type": "simple_choice",
+		"text": "When leading a project or team, what do you focus on?",
+		"options": [
+			{
+				"text": "Inspiring and motivating others towards a shared vision.",
+				"value_area_hint": ["Inspiration", "Leadership"]
+			},
+			{
+				"text": "Ensuring the project is completed successfully and responsibly.",
+				"value_area_hint": ["Responsibility", "Achievement"]
+			}
+		]
+	},
+	{
+		"id": 9,
+		"type": "simple_choice",
+		"text": "What is your perspective on handling risk in your career?",
+		"options": [
+			{
+				"text": "Preferring Security and avoiding unnecessary risks.",
+				"value_area_hint": ["Security"]
+			},
+			{
+				"text": "Being willing to take calculated risks for potential reward.",
+				"value_area_hint": ["Action", "Possibility"]
+			}
+		]
+	},
+	{
+		"id": 10,
+		"type": "simple_choice",
+		"text": "What gives you a sense of deeper meaning in your work?",
+		"options": [
+			{
+				"text": "Contributing to something larger than yourself.",
+				"value_area_hint": ["Humanity"]
+			},
+			{
+				"text": "Exploring the underlying principles and ideas.",
+				"value_area_hint": ["Spirituality", "Reason"]
+			}
+		]
+	}
+]
