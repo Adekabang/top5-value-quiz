@@ -7,7 +7,8 @@ import { PROFESSIONAL_VALUES } from '$lib/constants';
 
 const OPENROUTER_API_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 // Use the model specified in the environment variable - MUST support json_schema
-const AI_MODEL = OPENROUTER_MODEL || 'anthropic/claude-3-haiku-20240307'; // Default to a known compatible model
+// Default to a known compatible model if not set
+const AI_MODEL = OPENROUTER_MODEL || 'anthropic/claude-3-haiku-20240307';
 
 // --- Define the JSON Schema for the expected response ---
 const quizQuestionSchema = {
@@ -79,7 +80,7 @@ ${PROFESSIONAL_VALUES.join(', ')}
 
 Key Logic for Question Generation:
 - Receive current scores and remaining questions.
-- Generate the next question (either 'forced_choice' or 'ranking' type).
+- Generate the next question (either 'forced_choice' or 'ranking' type, unless specifically instructed otherwise in the user prompt).
 - Focus on comparing values with high or similar scores to differentiate them.
 - Occasionally include lower-scored values to give them a chance.
 - Ensure the 'values_being_compared' array in your JSON output contains ONLY exact string matches from the provided list of 52 values.
@@ -114,13 +115,62 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const { scores, remainingQuestions } = requestData;
 
+	// --- *** NEW: Analyze Scores to Determine Desired Question Type *** ---
+	let desiredType: 'ranking' | 'forced_choice' | 'auto' = 'auto'; // Default: let AI decide
+
+	try {
+		const sortedScores = Object.entries(scores)
+			.filter(([, score]) => score > 0) // Consider only values with positive scores
+			.sort(([, scoreA], [, scoreB]) => scoreB - scoreA);
+
+		// Heuristic: If 4 or more values are clustered near the top
+		if (sortedScores.length >= 4) {
+			const scoreThreshold = sortedScores[3][1]; // Score of the 4th highest value
+			// Ensure threshold is positive to avoid issues with many zeros/negatives
+			if (scoreThreshold > 0) {
+				const countAtOrAboveThreshold = sortedScores.filter(
+					([, score]) => score >= scoreThreshold
+				).length;
+
+				if (countAtOrAboveThreshold >= 4) {
+					console.log(
+						`Score analysis: ${countAtOrAboveThreshold} values >= score ${scoreThreshold}. Requesting ranking.`
+					);
+					desiredType = 'ranking';
+				}
+			}
+		}
+
+		// Add randomness: ~20% chance to let AI decide even if heuristic suggests ranking
+		if (desiredType === 'ranking' && Math.random() < 0.2) {
+			console.log("Score analysis: Randomly overriding ranking request to 'auto'.");
+			desiredType = 'auto';
+		}
+	} catch (analysisError) {
+		console.error('Error during score analysis:', analysisError);
+		// Default to 'auto' if analysis fails
+		desiredType = 'auto';
+	}
+	// --- *** End of Score Analysis Logic *** ---
+
 	// --- Construct the prompt for the AI ---
 	const scoresString = Object.entries(scores)
 		.sort(([, scoreA], [, scoreB]) => scoreB - scoreA)
 		.map(([value, score]) => `${value}: ${score}`)
 		.join(', ');
 
-	const userPrompt = `Current scores: ${scoresString}. Questions remaining: ${remainingQuestions}. Generate the next question using the 'generateQuizQuestion' JSON schema.`;
+	// Modify user prompt based on desired type
+	let userPrompt = `Current scores: ${scoresString}. Questions remaining: ${remainingQuestions}. Generate the next question using the 'generateQuizQuestion' JSON schema.`;
+	if (desiredType === 'ranking') {
+		userPrompt += " The question 'type' MUST be 'ranking'.";
+		console.log('Instructing AI to generate RANKING question.');
+	} else if (desiredType === 'forced_choice') {
+		// Example if you wanted to force forced_choice sometimes
+		userPrompt += " The question 'type' MUST be 'forced_choice'.";
+		console.log('Instructing AI to generate FORCED_CHOICE question.');
+	} else {
+		console.log("Letting AI choose question type ('auto').");
+	}
 
 	const messages = [
 		{ role: 'system', content: SYSTEM_PROMPT },
@@ -147,11 +197,10 @@ export const POST: RequestHandler = async ({ request }) => {
 			})
 		});
 
-		// Note: We parse the body regardless of status code first,
-		// because OpenRouter often includes error details in the JSON body even for non-200 responses.
+		// Note: We parse the body regardless of status code first
 		const data = await response.json();
 
-		// *** NEW: Check for error object in the response body ***
+		// Check for error object in the response body
 		if (data && data.error) {
 			console.error(
 				`OpenRouter API returned an error object (HTTP Status: ${response.status}):`,
@@ -168,7 +217,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			throw svelteKitError(status, `AI service error: ${errorMessage}`);
 		}
 
-		// If the *status code* itself indicates an error, but there was no error object in the body (less common)
+		// If the *status code* itself indicates an error, but there was no error object in the body
 		if (!response.ok) {
 			console.error(
 				`OpenRouter API error (${response.status}) with unexpected body:`,
@@ -219,6 +268,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			) {
 				console.warn('Parsed AI response missing expected fields despite schema request.');
 			}
+			// Example: Double-check a constraint handled by schema enum as a safety measure
 			for (const val of aiResponseContent.values_being_compared) {
 				if (!PROFESSIONAL_VALUES.includes(val)) {
 					console.error(
@@ -267,4 +317,4 @@ export const POST: RequestHandler = async ({ request }) => {
 			'Failed to generate the next question due to an internal server error.'
 		);
 	}
-};
+}; // End of POST handler
