@@ -40,7 +40,7 @@
 		question.type === 'ranking' && Object.keys(selectedRanking).length === question.options.length;
 </script>
 
-<div class="card bg-base-100 my-4 w-full shadow-xl">
+<div class="card bg-base-100 my-4 w-full max-w-2xl shadow-xl">
 	<div class="card-body">
 		<h2 class="card-title mb-4 text-lg md:text-xl">{question.text}</h2>
 
@@ -66,13 +66,13 @@
 				{#each question.options as option (option.text)}
 					<div class="bg-base-200 rounded-lg border p-3">
 						<p class="mb-2 text-center font-semibold">{option.text}</p>
-						<div class="flex justify-around">
+						<div class="flex justify-around gap-2">
 							{#each Array(question.options.length) as _, i}
 								{@const rank = i + 1}
 								<button
-									class="btn btn-sm btn-circle"
+									class="btn btn-sm btn-circle grow"
 									class:btn-primary={selectedRanking[rank] === option}
-									class:btn-outline={selectedRanking[rank] !== option}
+									class:btn-dash={selectedRanking[rank] !== option}
 									on:click={() => handleRankSelect(option, rank)}
 									disabled={selectedRanking[rank] && selectedRanking[rank] !== option}
 								>

@@ -68,7 +68,7 @@ export interface AnswerRecord {
 	timestamp: number; // Optional: for ordering/debugging
 }
 
-// *** NEW: Type for the request body sent to the evaluation API ***
+// *** NEW: Type for the request body sent to the evaluation and review APIs ***
 export interface EvaluateAnswersRequest {
 	history: AnswerRecord[];
 	finalScores: ValueScores; // Send final scores for context too
@@ -77,4 +77,9 @@ export interface EvaluateAnswersRequest {
 // *** NEW: Type for the response from the evaluation API ***
 export interface EvaluateAnswersResponse {
 	top5Values: string[]; // Expecting an array of 5 value strings
+}
+
+// *** NEW: Type for the response from the review API ***
+export interface ReviewResponse {
+	reviewText: string;
 }

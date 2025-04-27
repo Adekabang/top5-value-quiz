@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
-	// *** Import new stores and types ***
+	// *** Import reviewText store ***
 	import {
 		quizPhase,
 		valueScores,
@@ -11,8 +11,9 @@
 		retryPossible,
 		resetQuiz,
 		clearLocalStorage,
-		quizHistory, // Import history store
-		evaluatedTop5 // Import evaluated results store
+		quizHistory,
+		evaluatedTop5,
+		reviewText // <-- Import new store
 	} from '$lib/stores';
 	import {
 		PROFESSIONAL_VALUES,
@@ -28,8 +29,9 @@
 		Phase2Option,
 		QuizQuestion,
 		QuizPhase,
-		AnswerRecord, // Import AnswerRecord type
-		EvaluateAnswersResponse // Import response type
+		AnswerRecord,
+		EvaluateAnswersResponse,
+		ReviewResponse // <-- Import type
 	} from '$lib/types';
 	import QuestionCard from '$lib/components/QuestionCard.svelte';
 	import ProgressBar from '$lib/components/ProgressBar.svelte';
@@ -38,17 +40,16 @@
 	let phase1Questions: Phase1Question[] = [];
 	let currentQuestion: QuizQuestion | null = null;
 	let isLoading = false;
+	let loadingMessage = ''; // More specific loading message
 	let showResumePrompt = false;
 
-	// Add type guard functions
+	// Type guards remain the same...
 	function isPhase1(phase: string): phase is 'phase1' {
 		return phase === 'phase1';
 	}
-
 	function isPhase2(phase: string): phase is 'phase2' {
 		return phase === 'phase2';
 	}
-
 	function isEvaluating(phase: string): phase is 'evaluating' {
 		return phase === 'evaluating';
 	}
@@ -60,20 +61,36 @@
 			if (!response.ok) throw new Error('Failed to load Phase 1 questions');
 			phase1Questions = await response.json();
 
-			if (
-				browser &&
-				localStorage.getItem('valueScores') &&
-				$currentQuestionIndex > 0 &&
-				$currentQuestionIndex < TOTAL_QUESTIONS // Check if *before* evaluation phase
-			) {
-				showResumePrompt = true;
+			// Resume logic needs to check if evaluation/review is pending
+			if (browser && localStorage.getItem('valueScores') && $currentQuestionIndex > 0) {
+				// If results exist (evaluation+review done), go to results
+				// Check quizPhase store directly as evaluatedTop5/reviewText aren't persisted
+				if ($quizPhase === 'results') {
+					// Already done, stay in results (or potentially re-evaluate if desired)
+					// For simplicity, we assume results phase means done.
+				}
+				// If evaluation done but review pending/failed
+				else if ($quizPhase === 'evaluating') {
+					// Let determinePhaseAndQuestion handle triggering the right step
+					determinePhaseAndQuestion();
+				}
+				// If mid-quiz
+				else if (
+					$currentQuestionIndex <= TOTAL_QUESTIONS &&
+					$quizPhase !== 'results' &&
+					$quizPhase !== 'evaluating'
+				) {
+					showResumePrompt = true;
+				}
+				// Otherwise, likely inconsistent state, reset
+				else {
+					console.warn('Inconsistent state on load, resetting quiz.');
+					resetQuiz();
+					quizPhase.set('start');
+				}
 			} else if ($currentQuestionIndex === 0) {
 				clearLocalStorage();
 				quizPhase.set('start');
-			} else {
-				// If index is >= TOTAL_QUESTIONS, it might be finished or evaluating
-				// Let determinePhaseAndQuestion handle the state based on quizPhase store
-				determinePhaseAndQuestion();
 			}
 		} catch (err: any) {
 			console.error('Error loading Phase 1 questions:', err);
@@ -87,20 +104,17 @@
 		showResumePrompt = false;
 		determinePhaseAndQuestion();
 	}
-
 	function startNewQuiz() {
 		showResumePrompt = false;
 		resetQuiz();
 		quizPhase.set('start');
 	}
-
 	function startQuiz() {
 		resetQuiz();
 		quizPhase.set('phase1');
 		currentQuestionIndex.set(1);
 		setCurrentQuestion();
 	}
-
 	function setCurrentQuestion() {
 		const index = $currentQuestionIndex;
 		if ($quizPhase === 'phase1' && index > 0 && index <= TOTAL_PHASE_1_QUESTIONS) {
@@ -111,12 +125,11 @@
 			currentQuestion = null;
 		}
 	}
-
-	// fetchNextPhase2Question remains the same...
 	async function fetchNextPhase2Question() {
 		if ($quizPhase !== 'phase2') return;
 
 		isLoading = true;
+		loadingMessage = 'Generating next question...';
 		errorMessage.set(null);
 		retryPossible.set(false);
 
@@ -132,7 +145,6 @@
 					remainingQuestions: remaining
 				})
 			});
-
 			if (!response.ok) {
 				let errorMsg = `API Error (${response.status})`;
 				try {
@@ -150,6 +162,7 @@
 			currentPhase2Question.set(nextQuestion);
 			setCurrentQuestion();
 		} catch (err: any) {
+			/* ... error handling ... */
 			console.error('Error fetching Phase 2 question:', err);
 			if (err.status === 429) {
 				errorMessage.set('Rate limit reached. Please wait a moment and try again.');
@@ -159,21 +172,21 @@
 			retryPossible.set(true);
 		} finally {
 			isLoading = false;
+			loadingMessage = '';
 		}
 	}
-
-	// retryFetchQuestion remains the same...
 	function retryFetchQuestion() {
 		console.log('Retrying fetchNextPhase2Question...');
 		fetchNextPhase2Question();
 	}
 
-	// *** NEW: Function to call the evaluation API ***
+	// --- Updated evaluateAnswers ---
 	async function evaluateAnswers() {
-		console.log('Starting final evaluation...');
+		console.log('Starting AI evaluation...');
 		isLoading = true;
+		loadingMessage = 'Analyzing your answers...'; // Set loading message
 		errorMessage.set(null);
-		retryPossible.set(false); // Reset retry state for evaluation
+		retryPossible.set(false);
 
 		try {
 			const response = await fetch('/api/evaluate-answers', {
@@ -184,7 +197,6 @@
 					finalScores: $valueScores // Send scores for context
 				})
 			});
-
 			if (!response.ok) {
 				let errorMsg = `Evaluation API Error (${response.status})`;
 				try {
@@ -199,32 +211,102 @@
 			}
 
 			const result: EvaluateAnswersResponse = await response.json();
-
 			if (!result.top5Values || result.top5Values.length !== 5) {
 				throw new Error('Invalid evaluation data received from server.');
 			}
 
-			evaluatedTop5.set(result.top5Values); // Store the AI's result
-			quizPhase.set('results'); // Move to results phase
+			evaluatedTop5.set(result.top5Values); // Store the AI's top 5
+
+			// *** SUCCESS: Now trigger review generation ***
+			// Don't set isLoading to false here, let generateReviewText handle it
+			await generateReviewText();
 		} catch (err: any) {
 			console.error('Error evaluating answers:', err);
 			if (err.status === 429) {
-				errorMessage.set('Rate limit reached during evaluation. Please wait and try again.');
+				errorMessage.set('Rate limit reached during analysis. Please wait and try again.');
 			} else {
-				errorMessage.set(`Failed to evaluate results: ${err.message || 'Unknown error'}`);
+				errorMessage.set(`Failed to analyze results: ${err.message || 'Unknown error'}`);
 			}
-			// Allow retry for evaluation errors too
-			retryPossible.set(true);
-			// Stay in 'evaluating' phase on error to show retry button
-		} finally {
-			isLoading = false;
+			retryPossible.set(true); // Allow retry for evaluation
+			isLoading = false; // Stop loading indicator on evaluation error
+			loadingMessage = '';
 		}
 	}
 
-	// *** NEW: Function to handle retry for evaluation ***
+	// *** NEW: Function to generate the review text ***
+	async function generateReviewText() {
+		// Ensure evaluatedTop5 is set before proceeding
+		if (!$evaluatedTop5) {
+			console.error('Cannot generate review without evaluated top 5 values.');
+			errorMessage.set('Analysis must complete before generating insights.');
+			retryPossible.set(true); // Allow retry of the evaluation step
+			isLoading = false;
+			loadingMessage = '';
+			return;
+		}
+
+		console.log('Generating results review...');
+		isLoading = true; // Keep loading active
+		loadingMessage = 'Generating insights...'; // Update loading message
+		errorMessage.set(null); // Clear previous errors
+		retryPossible.set(false); // Reset retry for this specific step
+
+		try {
+			const response = await fetch('/api/generate-review', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					history: $quizHistory,
+					finalScores: $valueScores
+				})
+			});
+
+			if (!response.ok) {
+				let errorMsg = `Review API Error (${response.status})`;
+				try {
+					const errorData = await response.json();
+					errorMsg = errorData.message || errorMsg;
+				} catch (e) {
+					errorMsg = `${errorMsg}: ${response.statusText}`;
+				}
+				const error: any = new Error(errorMsg);
+				error.status = response.status;
+				throw error;
+			}
+
+			const result: ReviewResponse = await response.json();
+
+			if (!result.reviewText) {
+				throw new Error('Invalid review data received from server.');
+			}
+
+			reviewText.set(result.reviewText); // Store the review
+			quizPhase.set('results'); // **** Move to results ONLY after review success ****
+		} catch (err: any) {
+			console.error('Error generating review:', err);
+			if (err.status === 429) {
+				errorMessage.set('Rate limit reached generating review. Please wait and try again.');
+			} else {
+				errorMessage.set(`Failed to generate review: ${err.message || 'Unknown error'}`);
+			}
+			retryPossible.set(true); // Allow retry for review generation
+			// Stay in 'evaluating' phase on error
+		} finally {
+			isLoading = false; // Stop loading indicator
+			loadingMessage = ''; // Clear loading message
+		}
+	}
+
+	// *** Updated retryEvaluation to retry the whole process ***
 	function retryEvaluation() {
-		console.log('Retrying evaluation...');
+		console.log('Retrying evaluation and review...');
+		// Simply call evaluateAnswers again, it will handle both steps
 		evaluateAnswers();
+	}
+	// *** NEW: Function to specifically retry review generation ***
+	function retryReview() {
+		console.log('Retrying review generation...');
+		generateReviewText(); // Call only the review step
 	}
 
 	// --- Updated handleAnswer ---
@@ -233,7 +315,6 @@
 
 		// --- Apply Scoring Logic (remains same) ---
 		let updatedScores = { ...$valueScores };
-		// ... scoring logic ...
 		if (currentQuestion.type === 'simple_choice' && 'value_area_hint' in selectedOption) {
 			(selectedOption as Phase1Option).value_area_hint.forEach((value) => {
 				if (updatedScores.hasOwnProperty(value)) updatedScores[value]++;
@@ -260,7 +341,6 @@
 		// --- Record Answer in History ---
 		let answerText: string | string[];
 		let valuesInvolved: string[] = [];
-
 		if (currentQuestion.type === 'simple_choice' && 'value_area_hint' in selectedOption) {
 			answerText = selectedOption.text;
 			valuesInvolved = selectedOption.value_area_hint;
@@ -268,10 +348,10 @@
 			answerText = selectedOption.text;
 			valuesInvolved = (currentQuestion as Phase2Question).values_being_compared;
 		} else if (currentQuestion.type === 'ranking' && Array.isArray(selectedOption)) {
-			answerText = selectedOption.map((opt) => opt.text); // Store ranked list of texts
+			answerText = selectedOption.map((opt) => opt.text);
 			valuesInvolved = (currentQuestion as Phase2Question).values_being_compared;
 		} else {
-			answerText = 'Unknown'; // Fallback
+			answerText = 'Unknown';
 		}
 
 		const record: AnswerRecord = {
@@ -282,7 +362,7 @@
 			valuesInvolved: valuesInvolved,
 			timestamp: Date.now()
 		};
-		quizHistory.update((history) => [...history, record]); // Add record to history store
+		quizHistory.update((history) => [...history, record]);
 
 		// --- Advance Quiz ---
 		const nextIndex = $currentQuestionIndex + 1;
@@ -301,6 +381,7 @@
 			currentQuestionIndex.set(nextIndex); // Mark as completed index-wise
 			currentQuestion = null;
 			currentPhase2Question.set(null);
+			// Evaluation/Review triggered by determinePhaseAndQuestion
 		}
 	}
 
@@ -310,50 +391,64 @@
 	}
 
 	// --- Updated determinePhaseAndQuestion ---
-	function determinePhaseAndQuestion(
-		phase:
-			| 'start'
-			| 'phase1'
-			| 'phase2'
-			| 'evaluating'
-			| 'results'
-			| 'loading'
-			| 'error' = $quizPhase,
-		index = $currentQuestionIndex
-	) {
-		if (!isLoading) {
+	function determinePhaseAndQuestion(phase: QuizPhase = $quizPhase, index = $currentQuestionIndex) {
+		// Only reset error if not loading AND not already in an error state needing retry
+		if (!isLoading && !$retryPossible) {
 			errorMessage.set(null);
-			retryPossible.set(false);
 		}
+		// Don't reset retryPossible here, let the retry buttons handle it
 
-		// Handle special phases first
 		switch (phase) {
 			case 'start':
-			case 'results':
-			case 'error':
+			case 'results': // If already in results, do nothing more
+			case 'error': // If in critical error state, do nothing more
 				currentQuestion = null;
 				return;
 			case 'evaluating':
-				currentQuestion = null; // No question displayed during evaluation
-				if (!isLoading && !$errorMessage) {
-					evaluateAnswers();
+				currentQuestion = null;
+				// Trigger evaluation/review process if not already loading/in error
+				if (!isLoading && !$retryPossible) {
+					// Check if evaluation is done, if so, trigger review
+					if ($evaluatedTop5 && !$reviewText) {
+						console.log('State: Evaluating - Top 5 found, review missing. Triggering review.');
+						generateReviewText();
+					}
+					// Otherwise, trigger evaluation (which then triggers review)
+					else if (!$evaluatedTop5) {
+						console.log('State: Evaluating - Top 5 missing. Triggering evaluation.');
+						evaluateAnswers();
+					} else {
+						// Both exist, should be in 'results' phase, but handle defensively
+						console.log('State: Evaluating - Both top 5 and review exist. Moving to results.');
+						quizPhase.set('results');
+					}
+				} else {
+					console.log(
+						`State: Evaluating - Skipped trigger (isLoading: ${isLoading}, retryPossible: ${$retryPossible})`
+					);
 				}
-				return;
+				return; // Stay in evaluating phase until generateReviewText sets it to 'results'
 			case 'phase1':
 				if (index > 0 && index <= TOTAL_PHASE_1_QUESTIONS && phase1Questions.length > 0) {
 					currentQuestion = phase1Questions[index - 1];
-				}
+				} else {
+					currentQuestion = null;
+				} // Handle edge case
 				return;
 			case 'phase2':
 				if (index > TOTAL_PHASE_1_QUESTIONS && index <= TOTAL_QUESTIONS) {
-					if (!$currentPhase2Question && !isLoading) {
+					if (!$currentPhase2Question && !isLoading && !$retryPossible) {
 						fetchNextPhase2Question();
 					} else if ($currentPhase2Question) {
 						currentQuestion = $currentPhase2Question;
 					}
-				}
+				} else {
+					currentQuestion = null;
+				} // Handle edge case
 				return;
 			default:
+				// Should not happen with defined phases, but reset just in case
+				console.warn('State: Unknown phase detected, resetting to start.');
 				currentQuestion = null;
 				quizPhase.set('start');
 		}
@@ -410,7 +505,7 @@
 			<div class="my-10 text-center">
 				<span class="loading loading-lg loading-spinner text-primary"></span>
 				{#if isPhase2($quizPhase)}
-					<p>Generating next question...</p>
+					<p>{loadingMessage || 'Generating next question...'}</p>
 				{/if}
 			</div>
 		{/if}
@@ -433,14 +528,8 @@
 				>
 				<span>Error: {$errorMessage}</span>
 				{#if $retryPossible}
-					<!-- Use specific retry function based on phase -->
-					{#if isPhase2($quizPhase)}
-						<button class="btn btn-sm btn-primary" on:click={retryFetchQuestion}> Retry </button>
-					{:else if isEvaluating($quizPhase)}
-						<button class="btn btn-sm btn-primary" on:click={retryEvaluation}>
-							Retry Evaluation
-						</button>
-					{/if}
+					<!-- Only show retry for question generation here -->
+					<button class="btn btn-sm btn-primary" on:click={retryFetchQuestion}> Retry </button>
 				{:else}
 					<button class="btn btn-sm btn-ghost" on:click={resetQuiz}>Restart Quiz</button>
 				{/if}
@@ -451,19 +540,17 @@
 		{#if currentQuestion && !isLoading && !$errorMessage}
 			<QuestionCard question={currentQuestion} onAnswer={handleAnswer} />
 		{/if}
-
-		<!-- *** NEW: Evaluating Phase UI *** -->
 	{:else if isEvaluating($quizPhase)}
-		<!-- Progress Bar (Optional: Show progress at 100% or hide) -->
+		<!-- Evaluating Phase UI -->
 		<ProgressBar current={TOTAL_QUESTIONS} total={TOTAL_QUESTIONS} phase="Evaluating" />
-		<!-- Loading/Evaluating Indicator -->
 		{#if isLoading}
 			<div class="my-10 text-center">
 				<span class="loading loading-lg loading-spinner text-primary"></span>
-				<p>Analyzing your answers...</p>
+				<!-- Show specific loading message -->
+				<p>{loadingMessage || 'Processing...'}</p>
 			</div>
 		{/if}
-		<!-- Error Message & Retry Button for Evaluation -->
+		<!-- Error Message & Retry Button for Evaluation/Review -->
 		{#if $errorMessage && !isLoading}
 			<div role="alert" class="alert alert-error mx-auto my-4 max-w-xl">
 				<!-- Error Icon -->
@@ -481,17 +568,28 @@
 				>
 				<span>Error: {$errorMessage}</span>
 				{#if $retryPossible}
-					<button class="btn btn-sm btn-primary" on:click={retryEvaluation}>
-						Retry Evaluation
-					</button>
+					<!-- Determine which retry button to show -->
+					{#if $evaluatedTop5 && !$reviewText}
+						<!-- If evaluation succeeded, error must be in review -->
+						<button class="btn btn-sm btn-primary" on:click={retryReview}> Retry Insights </button>
+					{:else}
+						<!-- Otherwise, error was in evaluation -->
+						<button class="btn btn-sm btn-primary" on:click={retryEvaluation}>
+							Retry Analysis
+						</button>
+					{/if}
 				{:else}
 					<button class="btn btn-sm btn-ghost" on:click={resetQuiz}>Restart Quiz</button>
 				{/if}
 			</div>
 		{/if}
 	{:else if $quizPhase === 'results'}
-		<!-- Results Display - Pass the evaluated results -->
-		<ResultsDisplay topValuesResult={$evaluatedTop5} finalScores={$valueScores} />
+		<!-- Results Display - Pass evaluated results AND review text -->
+		<ResultsDisplay
+			topValuesResult={$evaluatedTop5}
+			finalScores={$valueScores}
+			reviewText={$reviewText}
+		/>
 	{:else if $quizPhase === 'error' && !isLoading}
 		<!-- General Error Display -->
 		<div role="alert" class="alert alert-error mx-auto max-w-xl">

@@ -68,6 +68,10 @@ if (browser) {
 // Do not persist this, calculate fresh each time
 export const evaluatedTop5 = writable<string[] | null>(null);
 
+// *** NEW: Store for the AI-generated review text ***
+// Do not persist this, calculate fresh each time
+export const reviewText = writable<string | null>(null);
+
 // --- Helper Functions ---
 
 // Function to reset the quiz state
@@ -80,6 +84,7 @@ export function resetQuiz() {
 	retryPossible.set(false);
 	quizHistory.set([]); // Clear history store
 	evaluatedTop5.set(null); // Clear evaluated results store
+	reviewText.set(null); // Reset review text
 	clearLocalStorage(); // Clear storage on explicit reset
 }
 

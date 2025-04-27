@@ -7,6 +7,8 @@
 	export let topValuesResult: string[] | null;
 	// *** Accept the final scores ***
 	export let finalScores: ValueScores;
+	// *** NEW: Accept review text ***
+	export let reviewText: string | null;
 
 	// *** Reactive statement to sort the AI's list based on scores ***
 	$: sortedTopValues = topValuesResult
@@ -20,11 +22,11 @@
 		: null;
 </script>
 
-<div class="card bg-base-100 mx-auto w-full max-w-md shadow-xl">
+<div class="card bg-base-100 mx-auto w-full max-w-2xl shadow-xl">
 	<div class="card-body items-center text-center">
 		<h2 class="card-title mb-4 text-2xl">Your Top 5 Professional Values</h2>
 		{#if sortedTopValues && sortedTopValues.length === 5}
-			<p class="text-base-content/70 mb-4 text-sm">(Based on AI analysis of your choices)</p>
+			<!-- Top 5 List -->
 			<ul class="list-none space-y-2 p-0 text-lg">
 				<!-- *** Iterate over the SORTED list *** -->
 				{#each sortedTopValues as value, index (value)}
@@ -37,6 +39,21 @@
 					</li>
 				{/each}
 			</ul>
+
+			<!-- *** NEW: Display Review Text *** -->
+			{#if reviewText}
+				<div class="divider my-4">Why These Values?</div>
+				<!-- Use prose for better text formatting, text-left for readability -->
+				<p class="prose prose-sm text-base-content/80 text-justify">
+					{@html reviewText.replace(/\n/g, '<br/>')}
+					<!-- Basic formatting for newlines -->
+				</p>
+			{:else}
+				<!-- Optional: Show placeholder if review is missing/failed -->
+				<p class="text-base-content/50 mt-4 text-sm italic">
+					Insights generation failed or is pending.
+				</p>
+			{/if}
 		{:else}
 			<p>Could not determine top values. Please try the quiz again.</p>
 		{/if}
